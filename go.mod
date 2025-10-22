@@ -1,4 +1,4 @@
-module github.com/stellar/go
+module github.com/stellar/friendbot
 
 go 1.23
 
@@ -134,6 +134,7 @@ require (
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
+	github.com/stellar/go v0.0.0-20251016201642-d3f17213d0ac // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
