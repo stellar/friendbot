@@ -1,0 +1,56 @@
+name: Push to DockerHub
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+  secrets: read
+
+jobs:
+  deploy:
+    environment: dockerhub
+    concurrency: dockerhub
+    steps:
+    - uses: actions/checkout@v3
+
+    - id: tag
+      run: |
+        tag="stellar/friendbot:${{ github.sha }}"
+        echo "tag=$tag" | tee -a $GITHUB_OUTPUT
+
+    - id: build-date
+      run: |
+        date="$(date -u  +%FT%TZ)"
+        echo "date=$build_date" | tee -a $GITHUB_OUTPUT
+
+    - run: >
+        docker build --pull
+        -t "${{ steps.tag.outputs.tag }}"
+        --label org.opencontainers.image.created="${{ steps.build-date.outputs.date}}"
+        --label org.opencontainers.image.revision="${{ github.sha }}"
+        .
+
+    - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - run: |
+        docker push ${{ steps.tag.outputs.tag }}
+
+    - uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.repos.createCommitStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            sha: '${{ github.sha }}',
+            state: 'success',
+            context: 'docker.io/${{ steps.tag.outputs.tag }}',
+            description: 'Available',
+          });
