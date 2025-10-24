@@ -38,7 +38,7 @@ jobs:
         --label org.opencontainers.image.revision="${{ github.sha }}"
         .
     - run: |
-        docker save "${{ steps.tag.outputs.tag }}" -o /tmp/image
+        docker save "${{ needs.setup.outputs.tag }}" -o /tmp/image
     - uses: actions/upload-artifact@v4
       with:
         name: image-amd64
@@ -64,7 +64,7 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        docker push ${{ steps.tag.outputs.tag }}
+        docker push ${{ needs.setup.outputs.tag }}
     - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: actions/github-script@v5
       with:
