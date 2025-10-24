@@ -9,12 +9,12 @@ permissions:
   contents: read
   pull-requests: read
   checks: write
-  secrets: read
 
 jobs:
   deploy:
     environment: dockerhub
     concurrency: dockerhub
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
