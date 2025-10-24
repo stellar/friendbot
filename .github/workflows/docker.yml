@@ -1,0 +1,79 @@
+name: Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  setup:
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      build-date: ${{ steps.build-date.outputs.build-date }}
+    runs-on: ubuntu-latest
+    steps:
+    - id: tag
+      run: |
+        tag="stellar/friendbot:${{ github.sha }}"
+        echo "tag=$tag" | tee -a $GITHUB_OUTPUT
+    - id: build-date
+      run: |
+        date="$(date -u  +%FT%TZ)"
+        echo "build-date=$build_date" | tee -a $GITHUB_OUTPUT
+
+  build:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: >
+        docker build --pull
+        -t "${{ needs.setup.outputs.tag }}"
+        --label org.opencontainers.image.created="${{ needs.setup.outputs.date}}"
+        --label org.opencontainers.image.revision="${{ github.sha }}"
+        .
+    - run: |
+        docker save "${{ needs.setup.outputs.tag }}" -o /tmp/image
+    - uses: actions/upload-artifact@v4
+      with:
+        name: image-amd64
+        path: /tmp/image
+        # 30 days is how long environments jobs can stay open for approval to run if they require an approver.
+        retention-days: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && '30' || '7' }}
+
+  push:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [setup, build]
+    environment: dockerhub
+    concurrency: dockerhub
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v5
+      with:
+        pattern: image-amd64
+        path: /tmp/
+    - run: |
+        docker load -i /tmp/image
+    - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - run: |
+        docker push ${{ needs.setup.outputs.tag }}
+    - uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.repos.createCommitStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            sha: '${{ github.sha }}',
+            state: 'success',
+            context: 'docker.io/${{ needs.setup.outputs.tag }}',
+            description: 'Available',
+          });
