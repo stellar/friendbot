@@ -54,7 +54,7 @@ jobs:
     - uses: actions/download-artifact@v5
       with:
         pattern: image-amd64
-        path: /tmp/image
+        path: /tmp/
     - run: |
         docker load -i /tmp/image
     - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
