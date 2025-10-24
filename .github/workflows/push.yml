@@ -11,40 +11,60 @@ permissions:
   checks: write
 
 jobs:
-  deploy:
-    environment: dockerhub
-    concurrency: dockerhub
+  setup:
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      build-date: ${{ steps.build-date.outputs.build-date }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-
     - id: tag
       run: |
         tag="stellar/friendbot:${{ github.sha }}"
         echo "tag=$tag" | tee -a $GITHUB_OUTPUT
-
     - id: build-date
       run: |
         date="$(date -u  +%FT%TZ)"
-        echo "date=$build_date" | tee -a $GITHUB_OUTPUT
+        echo "build-date=$build_date" | tee -a $GITHUB_OUTPUT
 
+  build:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
     - run: >
         docker build --pull
-        -t "${{ steps.tag.outputs.tag }}"
-        --label org.opencontainers.image.created="${{ steps.build-date.outputs.date}}"
+        -t "${{ needs.setup.outputs.tag }}"
+        --label org.opencontainers.image.created="${{ needs.setup.outputs.date}}"
         --label org.opencontainers.image.revision="${{ github.sha }}"
         .
+    - run: |
+        docker save "${{ steps.tag.outputs.tag }}" -o /tmp/image
+    - uses: actions/upload-artifact@v4
+      with:
+        name: image-amd64
+        path: /tmp/image
+        retention-days: 30
 
+  push:
+    needs: [setup, build]
+    environment: dockerhub
+    concurrency: dockerhub
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: image-amd64
+        path: /tmp/image
+    - run: |
+        docker load -i /tmp/image
     - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
       with:
         registry: docker.io
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-
     - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         docker push ${{ steps.tag.outputs.tag }}
-
     - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: actions/github-script@v5
       with:
