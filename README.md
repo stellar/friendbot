@@ -46,13 +46,13 @@ GET|POST /
 **GET request**:
 
 ```
-curl http://localhost:8000/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z
+curl http://localhost:8004/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z
 ```
 
 **POST request**:
 
 ```
-curl -X POST "http://localhost:8000/" \
+curl -X POST "http://localhost:8004/" \
   -d "addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
 ```
 
@@ -60,11 +60,11 @@ curl -X POST "http://localhost:8000/" \
 
 ```javascript
 // GET request
-const response = await fetch('http://localhost:8000/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z');
+const response = await fetch('http://localhost:8004/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z');
 const transaction = await response.json();
 
 // POST request
-const response = await fetch('http://localhost:8000/', {
+const response = await fetch('http://localhost:8004/', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded',
