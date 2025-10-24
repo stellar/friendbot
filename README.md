@@ -28,7 +28,7 @@ Friendbot exposes a simple REST API with a single endpoint that accepts both GET
 ### Endpoint
 
 ```
-GET /
+GET|POST /
 ```
 
 ### Parameters
