@@ -43,7 +43,7 @@ jobs:
       with:
         name: image-amd64
         path: /tmp/image
-        retention-days: 30
+        retention-days: 30 # 30 days is how long environments jobs can stay open for approval to run if they require an approver
 
   push:
     needs: [setup, build]
