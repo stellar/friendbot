@@ -13,9 +13,9 @@ Friendbot helps users of the Stellar testnet by exposing a REST endpoint that cr
 
 > [!TIP]
 > 
-> Friendbot for [Testnet] is hosted at https://friendbot.stellar.org.
-> Friendbot for [Futurenet] is hosted at https://friendbot-futurenet.stellar.org.
-> Friendbot in [Quickstart] is available at http://localhost:8000/friendbot.
+> Friendbot for [Testnet] is hosted at https://friendbot.stellar.org.  
+> Friendbot for [Futurenet] is hosted at https://friendbot-futurenet.stellar.org.  
+> Friendbot in [Quickstart] is available at http://localhost:8000/friendbot.  
 
 [Testnet]: https://developers.stellar.org/docs/networks
 [Futurenet]: https://developers.stellar.org/docs/networks
