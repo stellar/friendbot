@@ -28,26 +28,30 @@ Friendbot exposes a simple REST API with a single endpoint that accepts both GET
 ### Endpoint
 
 ```
-GET|POST /
+GET /
 ```
 
 ### Parameters
 
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `addr` | string | Yes | The Stellar account address to fund |
+
 
 ### Examples
 
 #### Using cURL
 
 **GET request**:
-```bash
-curl "http://localhost:8000/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
+
+```
+curl http://localhost:8000/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z
 ```
 
 **POST request**:
-```bash
+
+```
 curl -X POST "http://localhost:8000/" \
   -d "addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
 ```
@@ -72,17 +76,11 @@ const transaction = await response.json();
 
 ### Response
 
-On success, the API returns a Stellar transaction object:
+On success, the API returns a 200 OK.
 
-```json
-{
-  "envelope_xdr": "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE=",
-  "successful": true,
-  "hash": "c4c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8c0d8",
-  "ledger": 12345678,
-  "created_at": "2024-01-01T00:00:00Z"
-}
-```
+Note the contents of the response may change depending on the underlying
+systems in use to submit and process the transaction and should generally not
+be relied upon.
 
 ### Error Responses
 
@@ -91,16 +89,6 @@ The API returns appropriate HTTP status codes and error details:
 - **400 Bad Request**: Invalid account address or account already funded
 - **404 Not Found**: Account does not exist (for certain operations)
 - **500 Internal Server Error**: Server-side error
-
-Example error response:
-```json
-{
-  "type": "https://stellar.org/horizon-errors/bad_request",
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "Account already funded"
-}
-```
 
 ## Running Friendbot
 
