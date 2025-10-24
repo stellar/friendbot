@@ -43,9 +43,11 @@ jobs:
       with:
         name: image-amd64
         path: /tmp/image
-        retention-days: 30 # 30 days is how long environments jobs can stay open for approval to run if they require an approver
+        # 30 days is how long environments jobs can stay open for approval to run if they require an approver.
+        retention-days: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && '30' || '7' }}
 
   push:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [setup, build]
     environment: dockerhub
     concurrency: dockerhub
@@ -62,11 +64,9 @@ jobs:
         registry: docker.io
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
+    - run: |
         docker push ${{ needs.setup.outputs.tag }}
-    - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/github-script@v5
+    - uses: actions/github-script@v5
       with:
         script: |
           github.rest.repos.createCommitStatus({
@@ -74,6 +74,6 @@ jobs:
             repo: context.repo.repo,
             sha: '${{ github.sha }}',
             state: 'success',
-            context: 'docker.io/${{ steps.tag.outputs.tag }}',
+            context: 'docker.io/${{ needs.setup.outputs.tag }}',
             description: 'Available',
           });
