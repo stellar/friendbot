@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/protocols/horizon"
-	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/support/render/problem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -40,7 +40,6 @@ type AccountDetails struct {
 	Balance  string
 }
 
-
 // HorizonNetworkError wraps a horizonclient.Error and implements the NetworkError interface.
 type HorizonNetworkError struct {
 	err *horizonclient.Error
