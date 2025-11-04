@@ -2,7 +2,6 @@ package internal
 
 import (
 	"github.com/stellar/go/clients/horizonclient"
-	hProtocol "github.com/stellar/go/protocols/horizon"
 )
 
 // NetworkError represents a network operation error with abstracted checking methods.
