@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"net/http"
+
 	"github.com/stellar/go/clients/horizonclient"
 )
 
@@ -51,7 +53,7 @@ func NewHorizonNetworkError(err *horizonclient.Error) *HorizonNetworkError {
 
 // IsNotFound returns true if the error indicates the requested resource was not found.
 func (e *HorizonNetworkError) IsNotFound() bool {
-	return e.err.Response.StatusCode == 404
+	return e.err.Response.StatusCode == http.StatusNotFound
 }
 
 // IsBadSequence returns true if the error indicates a bad sequence number.
@@ -62,7 +64,7 @@ func (e *HorizonNetworkError) IsBadSequence() bool {
 
 // IsTimeout returns true if the error indicates a timeout occurred.
 func (e *HorizonNetworkError) IsTimeout() bool {
-	return e.err.Problem.Status == 504 // Gateway Timeout
+	return e.err.Problem.Status == http.StatusGatewayTimeout
 }
 
 // ResultString returns the result string from the error, if available.
