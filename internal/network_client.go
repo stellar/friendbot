@@ -131,10 +131,3 @@ func (h *HorizonNetworkClient) GetAccountDetails(accountID string) (*AccountDeta
 		Balance:  nativeBalance,
 	}, nil
 }
-
-// convertHorizonTransaction converts a horizon protocol transaction to our minimal TransactionResult.
-func convertHorizonTransaction(tx hProtocol.Transaction) *TransactionResult {
-	return &TransactionResult{
-		Successful: tx.Successful,
-	}
-}
