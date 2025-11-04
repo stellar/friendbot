@@ -14,10 +14,10 @@ import (
 func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 	ctx := context.Background()
 
-	var submittedTx string
+	submittedTxChan := make(chan string, 2)
 	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
 		// Capture the submitted transaction for assertion
-		submittedTx = tx
+		submittedTxChan <- tx
 		// Instead of submitting the tx, we emulate a success.
 		return &TransactionResult{Successful: true}, nil
 	}
@@ -65,6 +65,7 @@ func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 	}
 	assert.True(t, txSuccess.Successful)
 	expectedTxn := "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE="
+	submittedTx := <-submittedTxChan
 	assert.Equal(t, expectedTxn, submittedTx)
 
 	// Don't assert on tx values below, since the completion order is unknown.
@@ -86,10 +87,10 @@ func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 func TestFriendbot_Pay_accountExists(t *testing.T) {
 	ctx := context.Background()
 
-	var submittedTx string
+	submittedTxChan := make(chan string, 2)
 	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
 		// Capture the submitted transaction for assertion
-		submittedTx = tx
+		submittedTxChan <- tx
 		// Instead of submitting the tx, we emulate a success.
 		return &TransactionResult{Successful: true}, nil
 	}
@@ -137,6 +138,7 @@ func TestFriendbot_Pay_accountExists(t *testing.T) {
 	}
 	assert.True(t, txSuccess.Successful)
 	expectedTxn := "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAQAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAAAAAAAAXSHboAAAAAAAAAAACZkP+GAAAAEBAwm/hWuu/ZHHQWRD9oF/cnSwQyTZpHQoTlPlVSFH4g12HR2nbzOI9wC5Z5bt0ueXny4UNFS5QhUvnzdb2FMsDCb5ThgAAAED1HzWPW6lKBxBi6MTSwM/POytPSfL87taiarpTIk5naoqXPLpM0YBBaf5uH8de5Id1KSCP/g8tdeCxvrT053kJ"
+	submittedTx := <-submittedTxChan
 	assert.Equal(t, expectedTxn, submittedTx)
 
 	// Don't assert on tx values below, since the completion order is unknown.
