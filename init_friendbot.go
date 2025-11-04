@@ -35,6 +35,7 @@ func initFriendbot(
 		HTTP:       http.DefaultClient,
 		AppName:    "friendbot",
 	}
+	networkClient := internal.NewHorizonNetworkClient(hclient)
 
 	botKP, err := keypair.Parse(friendbotSecret)
 	if err != nil {
@@ -57,7 +58,7 @@ func initFriendbot(
 		submitTxRetriesAllowed = 5
 	}
 	log.Printf("Found all valid params, now creating %d minions", numMinions)
-	minions, err := createMinionAccounts(botAccount, botKeypair, networkPassphrase, startingBalance, minionBalance, numMinions, minionBatchSize, submitTxRetriesAllowed, baseFee, hclient)
+	minions, err := createMinionAccounts(botAccount, botKeypair, networkPassphrase, startingBalance, minionBalance, numMinions, minionBatchSize, submitTxRetriesAllowed, baseFee, networkClient)
 	if err != nil && len(minions) == 0 {
 		return nil, errors.Wrap(err, "creating minion accounts")
 	}
@@ -66,7 +67,7 @@ func initFriendbot(
 }
 
 func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full, networkPassphrase, newAccountBalance, minionBalance string,
-	numMinions, minionBatchSize, submitTxRetriesAllowed int, baseFee int64, hclient horizonclient.ClientInterface) ([]internal.Minion, error) {
+	numMinions, minionBatchSize, submitTxRetriesAllowed int, baseFee int64, networkClient internal.NetworkClient) ([]internal.Minion, error) {
 
 	var minions []internal.Minion
 	numRemainingMinions := numMinions
@@ -79,7 +80,7 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 			ops        []txnbuild.Operation
 		)
 		// Refresh the sequence number before submitting a new transaction.
-		rerr := botAccount.RefreshSequenceNumber(hclient)
+		rerr := botAccount.RefreshSequenceNumber(networkClient)
 		if rerr != nil {
 			return minions, errors.Wrap(rerr, "refreshing bot seqnum")
 		}
@@ -99,7 +100,7 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 				Keypair:              minionKeypair,
 				BotAccount:           botAccount,
 				BotKeypair:           botKeypair,
-				Horizon:              hclient,
+				NetworkClient:        networkClient,
 				Network:              networkPassphrase,
 				StartingBalance:      newAccountBalance,
 				SubmitTransaction:    internal.SubmitTransaction,
@@ -138,15 +139,14 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 			return minions, errors.Wrap(err, "unable to serialize tx")
 		}
 
-		resp, err := hclient.SubmitTransactionXDR(txe)
+		resp, err := networkClient.SubmitTransaction(txe)
 		if err != nil {
 			log.Printf("%+v\n", resp)
 			switch e := err.(type) {
-			case *horizonclient.Error:
-				problemString := fmt.Sprintf("Problem[Type=%s, Title=%s, Status=%d, Detail=%s, Extras=%v]", e.Problem.Type, e.Problem.Title, e.Problem.Status, e.Problem.Detail, e.Problem.Extras)
+			case internal.NetworkError:
 				// If we hit an error here due to network congestion, try again until we hit max # of retries allowed
-				if e.Problem.Status == http.StatusGatewayTimeout {
-					err = errors.Wrap(errors.Wrap(e, problemString), "submitting create accounts tx")
+				if e.IsTimeout() {
+					err = errors.Wrap(err, "submitting create accounts tx")
 					if currentSubmitTxRetry >= submitTxRetriesAllowed {
 						return minions, errors.Wrap(err, fmt.Sprintf("after retrying %d times", currentSubmitTxRetry))
 					}
@@ -155,7 +155,7 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 					currentSubmitTxRetry += 1
 					continue
 				}
-				return minions, errors.Wrap(errors.Wrap(e, problemString), "submitting create accounts tx")
+				return minions, errors.Wrap(err, "submitting create accounts tx")
 			}
 			return minions, errors.Wrap(err, "submitting create accounts tx")
 		}

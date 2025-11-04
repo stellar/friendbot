@@ -7,22 +7,22 @@ import (
 
 	"github.com/stellar/go/txnbuild"
 
-	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
-	hProtocol "github.com/stellar/go/protocols/horizon"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 	ctx := context.Background()
 
-	mockSubmitTransaction := func(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (*hProtocol.Transaction, error) {
+	var submittedTx string
+	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
+		// Capture the submitted transaction for assertion
+		submittedTx = tx
 		// Instead of submitting the tx, we emulate a success.
-		txSuccess := hProtocol.Transaction{EnvelopeXdr: tx, Successful: true}
-		return &txSuccess, nil
+		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, hclient horizonclient.ClientInterface, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -63,8 +63,9 @@ func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	assert.True(t, txSuccess.Successful)
 	expectedTxn := "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE="
-	assert.Equal(t, expectedTxn, txSuccess.EnvelopeXdr)
+	assert.Equal(t, expectedTxn, submittedTx)
 
 	// Don't assert on tx values below, since the completion order is unknown.
 	var wg sync.WaitGroup
@@ -84,13 +85,16 @@ func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 
 func TestFriendbot_Pay_accountExists(t *testing.T) {
 	ctx := context.Background()
-	mockSubmitTransaction := func(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (*hProtocol.Transaction, error) {
+
+	var submittedTx string
+	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
+		// Capture the submitted transaction for assertion
+		submittedTx = tx
 		// Instead of submitting the tx, we emulate a success.
-		txSuccess := hProtocol.Transaction{EnvelopeXdr: tx, Successful: true}
-		return &txSuccess, nil
+		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, hclient horizonclient.ClientInterface, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return true, "0", nil
 	}
 
@@ -131,8 +135,9 @@ func TestFriendbot_Pay_accountExists(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	assert.True(t, txSuccess.Successful)
 	expectedTxn := "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAQAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAAAAAAAAXSHboAAAAAAAAAAACZkP+GAAAAEBAwm/hWuu/ZHHQWRD9oF/cnSwQyTZpHQoTlPlVSFH4g12HR2nbzOI9wC5Z5bt0ueXny4UNFS5QhUvnzdb2FMsDCb5ThgAAAED1HzWPW6lKBxBi6MTSwM/POytPSfL87taiarpTIk5naoqXPLpM0YBBaf5uH8de5Id1KSCP/g8tdeCxvrT053kJ"
-	assert.Equal(t, expectedTxn, txSuccess.EnvelopeXdr)
+	assert.Equal(t, expectedTxn, submittedTx)
 
 	// Don't assert on tx values below, since the completion order is unknown.
 	var wg sync.WaitGroup
@@ -152,13 +157,12 @@ func TestFriendbot_Pay_accountExists(t *testing.T) {
 
 func TestFriendbot_Pay_accountExistsAlreadyFunded(t *testing.T) {
 	ctx := context.Background()
-	mockSubmitTransaction := func(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (*hProtocol.Transaction, error) {
+	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
 		// Instead of submitting the tx, we emulate a success.
-		txSuccess := hProtocol.Transaction{EnvelopeXdr: tx, Successful: true}
-		return &txSuccess, nil
+		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, hclient horizonclient.ClientInterface, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return true, "10000.00", nil
 	}
 

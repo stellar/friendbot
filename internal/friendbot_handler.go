@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/stellar/go/protocols/horizon"
 	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/support/render/hal"
 	"github.com/stellar/go/support/render/problem"
@@ -60,7 +59,7 @@ func (handler *FriendbotHandler) Handle(w http.ResponseWriter, r *http.Request) 
 }
 
 // doHandle is just a convenience method that returns the object to be rendered
-func (handler *FriendbotHandler) doHandle(ctx context.Context, r *http.Request) (*horizon.Transaction, error) {
+func (handler *FriendbotHandler) doHandle(ctx context.Context, r *http.Request) (*TransactionResult, error) {
 	ctx, span := handler.tracer.Start(ctx, "friendbot.parse_http_request")
 	defer span.End()
 	err := r.ParseForm()

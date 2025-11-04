@@ -40,7 +40,8 @@ func TestInitFriendbot_createMinionAccounts_success(t *testing.T) {
 	numMinion := 1000
 	minionBatchSize := 50
 	submitTxRetriesAllowed := 5
-	createdMinions, err := createMinionAccounts(botAccount, botKeypair, "Test SDF Network ; September 2015", "10000", "101", numMinion, minionBatchSize, submitTxRetriesAllowed, 1000, &horizonClientMock)
+	networkClient := internal.NewHorizonNetworkClient(&horizonClientMock)
+	createdMinions, err := createMinionAccounts(botAccount, botKeypair, "Test SDF Network ; September 2015", "10000", "101", numMinion, minionBatchSize, submitTxRetriesAllowed, 1000, networkClient)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1000, len(createdMinions))
@@ -84,7 +85,8 @@ func TestInitFriendbot_createMinionAccounts_timeoutError(t *testing.T) {
 	numMinion := 1000
 	minionBatchSize := 50
 	submitTxRetriesAllowed := 5
-	createdMinions, err := createMinionAccounts(botAccount, botKeypair, "Test SDF Network ; September 2015", "10000", "101", numMinion, minionBatchSize, submitTxRetriesAllowed, 1000, &horizonClientMock)
+	networkClient := internal.NewHorizonNetworkClient(&horizonClientMock)
+	createdMinions, err := createMinionAccounts(botAccount, botKeypair, "Test SDF Network ; September 2015", "10000", "101", numMinion, minionBatchSize, submitTxRetriesAllowed, 1000, networkClient)
 	assert.Equal(t, 150, len(createdMinions))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "after retrying 5 times: submitting create accounts tx:")
