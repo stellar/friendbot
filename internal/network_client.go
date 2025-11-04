@@ -72,7 +72,6 @@ func (e *HorizonNetworkError) ResultString() (string, error) {
 	return e.err.ResultString()
 }
 
-
 // Error implements the error interface.
 func (e *HorizonNetworkError) Error() string {
 	return e.err.Error()
