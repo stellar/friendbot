@@ -14,7 +14,6 @@ linters:
     - gosec
     - govet
     - ineffassign
-    - lll
     - misspell
     - mnd
     - nakedret
@@ -55,8 +54,6 @@ linters:
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
-    lll:
-      line-length: 1000
     misspell:
       locale: US
     nolintlint:
