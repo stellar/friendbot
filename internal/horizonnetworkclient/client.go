@@ -1,4 +1,4 @@
-package horizon
+package horizonnetworkclient
 
 import (
 	"net/http"

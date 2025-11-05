@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/stellar/friendbot/internal"
-	"github.com/stellar/friendbot/internal/horizon"
+	"github.com/stellar/friendbot/internal/horizonnetworkclient"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/strkey"
@@ -36,7 +36,7 @@ func initFriendbot(
 		HTTP:       http.DefaultClient,
 		AppName:    "friendbot",
 	}
-	networkClient := horizon.NewNetworkClient(hclient)
+	networkClient := horizonnetworkclient.NewNetworkClient(hclient)
 
 	botKP, err := keypair.Parse(friendbotSecret)
 	if err != nil {
