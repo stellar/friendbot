@@ -7,7 +7,7 @@ import (
 	"github.com/stellar/go/clients/horizonclient"
 )
 
-// NetworkError wraps a horizonclient.Error and implements the internal.NetworkError interface.
+// NetworkError wraps a horizon error and implements the internal.NetworkError interface.
 type NetworkError struct {
 	err *horizonclient.Error
 }
@@ -19,7 +19,7 @@ func NewNetworkError(err *horizonclient.Error) *NetworkError {
 
 // IsNotFound returns true if the error indicates the requested resource was not found.
 func (e *NetworkError) IsNotFound() bool {
-	return e.err.Response.StatusCode == http.StatusNotFound
+	return e.err.Response != nil && e.err.Response.StatusCode == http.StatusNotFound
 }
 
 // IsBadSequence returns true if the error indicates a bad sequence number.
