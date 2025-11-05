@@ -3,10 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/stellar/friendbot/internal"
-	"github.com/stellar/go/clients/horizonclient"
+	"github.com/stellar/friendbot/internal/horizon"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/support/errors"
@@ -30,12 +29,8 @@ func initFriendbot(
 	// Guarantee that friendbotSecret is a seed, if not blank.
 	strkey.MustDecode(strkey.VersionByteSeed, friendbotSecret)
 
-	hclient := &horizonclient.Client{
-		HorizonURL: horizonURL,
-		HTTP:       http.DefaultClient,
-		AppName:    "friendbot",
-	}
-	networkClient := internal.NewHorizonNetworkClient(hclient)
+	hclient := horizon.NewHorizonClient(horizonURL)
+	networkClient := horizon.NewNetworkClient(hclient)
 
 	botKP, err := keypair.Parse(friendbotSecret)
 	if err != nil {

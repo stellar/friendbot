@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stellar/friendbot/internal"
+	"github.com/stellar/friendbot/internal/horizon"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/protocols/horizon"
@@ -40,7 +41,7 @@ func TestInitFriendbot_createMinionAccounts_success(t *testing.T) {
 	numMinion := 1000
 	minionBatchSize := 50
 	submitTxRetriesAllowed := 5
-	networkClient := internal.NewHorizonNetworkClient(&horizonClientMock)
+	networkClient := horizon.NewNetworkClient(&horizonClientMock)
 	createdMinions, err := createMinionAccounts(botAccount, botKeypair, "Test SDF Network ; September 2015", "10000", "101", numMinion, minionBatchSize, submitTxRetriesAllowed, 1000, networkClient)
 	assert.NoError(t, err)
 
@@ -85,7 +86,7 @@ func TestInitFriendbot_createMinionAccounts_timeoutError(t *testing.T) {
 	numMinion := 1000
 	minionBatchSize := 50
 	submitTxRetriesAllowed := 5
-	networkClient := internal.NewHorizonNetworkClient(&horizonClientMock)
+	networkClient := horizon.NewNetworkClient(&horizonClientMock)
 	createdMinions, err := createMinionAccounts(botAccount, botKeypair, "Test SDF Network ; September 2015", "10000", "101", numMinion, minionBatchSize, submitTxRetriesAllowed, 1000, networkClient)
 	assert.Equal(t, 150, len(createdMinions))
 	assert.Error(t, err)
