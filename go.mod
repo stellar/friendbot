@@ -59,6 +59,10 @@ require (
 require (
 	github.com/creachadair/jrpc2 v1.2.0 // indirect
 	github.com/creachadair/mds v0.13.4 // indirect
+	cloud.google.com/go v0.114.0 // indirect
+	github.com/ajg/form v0.0.0-20160822230020-523a5da1a92f // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/buger/goreplay v1.3.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
@@ -70,6 +74,7 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/grpc v1.64.1 // indirect
