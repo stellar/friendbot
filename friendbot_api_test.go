@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
@@ -18,9 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setupTestFriendbot creates a test friendbot with mocked dependencies
-func setupTestFriendbot(t *testing.T) (*internal.Bot, *chi.Mux) {
-	// Create mock functions similar to the unit tests
+// Setup creates a test friendbot with mocked horizon.
+func setup(t *testing.T) http.Handler {
 	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, hclient horizonclient.ClientInterface, tx string) (*horizon.Transaction, error) {
 		// Emulate a successful transaction
 		txSuccess := horizon.Transaction{
@@ -36,7 +34,6 @@ func setupTestFriendbot(t *testing.T) (*internal.Bot, *chi.Mux) {
 		return false, "0", nil
 	}
 
-	// Use test keypairs from the existing unit tests
 	botSeed := "SCWNLYELENPBXN46FHYXETT5LJCYBZD5VUQQVW4KZPHFO2YTQJUWT4D5"
 	botKeypair, err := keypair.Parse(botSeed)
 	require.NoError(t, err)
@@ -68,16 +65,14 @@ func setupTestFriendbot(t *testing.T) (*internal.Bot, *chi.Mux) {
 	registerProblems()
 
 	// Create router with test config
-	cfg := Config{
-		UseCloudflareIP: false,
-	}
+	cfg := Config{}
 	router := initRouter(cfg, fb)
 
-	return fb, router
+	return router
 }
 
 func TestFriendbotAPI_SuccessfulFunding_GET(t *testing.T) {
-	_, router := setupTestFriendbot(t)
+	router := setup(t)
 
 	recipientAddress := "GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
 
@@ -140,7 +135,7 @@ func TestFriendbotAPI_SuccessfulFunding_GET(t *testing.T) {
 }
 
 func TestFriendbotAPI_SuccessfulFunding_POST(t *testing.T) {
-	_, router := setupTestFriendbot(t)
+	router := setup(t)
 
 	recipientAddress := "GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
 
@@ -207,7 +202,7 @@ func TestFriendbotAPI_SuccessfulFunding_POST(t *testing.T) {
 }
 
 func TestFriendbotAPI_MissingAddressParameter(t *testing.T) {
-	_, router := setupTestFriendbot(t)
+	router := setup(t)
 
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
@@ -232,7 +227,7 @@ func TestFriendbotAPI_MissingAddressParameter(t *testing.T) {
 }
 
 func TestFriendbotAPI_InvalidAddress(t *testing.T) {
-	_, router := setupTestFriendbot(t)
+	router := setup(t)
 
 	invalidAddress := "invalid_address"
 
@@ -321,7 +316,7 @@ func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 }
 
 func TestFriendbotAPI_404NotFound(t *testing.T) {
-	_, router := setupTestFriendbot(t)
+	router := setup(t)
 
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
 	w := httptest.NewRecorder()
@@ -342,7 +337,7 @@ func TestFriendbotAPI_404NotFound(t *testing.T) {
 }
 
 func TestFriendbotAPI_MethodNotAllowed(t *testing.T) {
-	_, router := setupTestFriendbot(t)
+	router := setup(t)
 
 	// Test PUT method which should not be allowed
 	req := httptest.NewRequest("PUT", "/", nil)
