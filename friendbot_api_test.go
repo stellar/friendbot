@@ -83,7 +83,7 @@ func TestFriendbotAPI_SuccessfulFunding_GET(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Assert the JSON response matches expected structure
+	// Assert the full JSON response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
           "successful": true,
@@ -109,7 +109,7 @@ func TestFriendbotAPI_SuccessfulFunding_POST(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Assert the JSON response matches expected structure
+	// Assert the full JSON response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
           "successful": true,
