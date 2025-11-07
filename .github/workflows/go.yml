@@ -82,7 +82,7 @@ jobs:
     - uses: ./.github/actions/setup-go
       with:
         go-version: ${{ matrix.go }}
-    - uses: stellar/actions/quickstart@main
+    - uses: stellar/quickstart@main
     - env:
         HORIZON_URL: http://localhost:8000
       run: go test -race ./...
