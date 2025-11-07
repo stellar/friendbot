@@ -148,8 +148,8 @@ func TestFriendbotHorizonIntegration_SuccessfulFunding_GET(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
 	var result struct {
-		Hash string `json:"hash"`
-		Successful bool `json:"successful"`
+		Hash       string `json:"hash"`
+		Successful bool   `json:"successful"`
 	}
 	err = json.Unmarshal([]byte(body), &result)
 	require.NoError(t, err)
@@ -177,8 +177,8 @@ func TestFriendbotHorizonIntegration_SuccessfulFunding_POST(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
 	var result struct {
-		Hash string `json:"hash"`
-		Successful bool `json:"successful"`
+		Hash       string `json:"hash"`
+		Successful bool   `json:"successful"`
 	}
 	err = json.Unmarshal([]byte(body), &result)
 	require.NoError(t, err)
