@@ -18,13 +18,13 @@ jobs:
   complete:
     if: always()
     needs: [lint, build, test]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-slim
     steps:
     - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
       run: exit 1
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,8 +40,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-22.04]
-        go: ["1.23"]
+        os: [ubuntu-24.04]
+        go: ["1.24"]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
@@ -53,8 +53,8 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-22.04]
-        go: ["1.23"]
+        os: [ubuntu-24.04]
+        go: ["1.24"]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
