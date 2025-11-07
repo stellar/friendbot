@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stellar/friendbot/internal"
+	"github.com/stellar/friendbot/internal/horizonnetworkclient"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/txnbuild"
@@ -120,7 +121,7 @@ func setupHorizonIntegration(t *testing.T) http.Handler {
 		Keypair:              minionKeypair,
 		BotAccount:           botAccount,
 		BotKeypair:           botKeypair,
-		Horizon:              hclient,
+		NetworkClient:        horizonnetworkclient.NewNetworkClient(hclient),
 		Network:              networkPassphrase,
 		StartingBalance:      startingBalance,
 		SubmitTransaction:    internal.SubmitTransaction,
