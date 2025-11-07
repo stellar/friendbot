@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/support/errors"
 )
 
@@ -27,10 +26,9 @@ func (a Account) GetSequenceNumber() (int64, error) {
 	return a.Sequence, nil
 }
 
-// RefreshSequenceNumber gets an Account's correct in-memory sequence number from Horizon.
-func (a *Account) RefreshSequenceNumber(hclient horizonclient.ClientInterface) error {
-	accountRequest := horizonclient.AccountRequest{AccountID: a.GetAccountID()}
-	accountDetail, err := hclient.AccountDetail(accountRequest)
+// RefreshSequenceNumber gets an Account's correct in-memory sequence number from the network.
+func (a *Account) RefreshSequenceNumber(networkClient NetworkClient) error {
+	accountDetail, err := networkClient.GetAccountDetails(a.GetAccountID())
 	if err != nil {
 		return errors.Wrap(err, "getting account detail")
 	}

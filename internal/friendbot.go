@@ -4,8 +4,6 @@ import (
 	"context"
 	"log"
 	"sync"
-
-	hProtocol "github.com/stellar/go/protocols/horizon"
 )
 
 // Bot represents the friendbot subsystem and primarily delegates work
@@ -18,12 +16,12 @@ type Bot struct {
 
 // SubmitResult is the result from the asynchronous tx submission.
 type SubmitResult struct {
-	maybeTransactionSuccess *hProtocol.Transaction
+	maybeTransactionSuccess *TransactionResult
 	maybeErr                error
 }
 
 // Pay funds the account at `destAddress`.
-func (bot *Bot) Pay(ctx context.Context, destAddress string) (*hProtocol.Transaction, error) {
+func (bot *Bot) Pay(ctx context.Context, destAddress string) (*TransactionResult, error) {
 	bot.indexMux.Lock()
 	log.Printf("Selecting minion at index %d of max length %d", bot.nextMinionIndex, len(bot.Minions))
 	minion := bot.Minions[bot.nextMinionIndex]
