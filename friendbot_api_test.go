@@ -21,9 +21,9 @@ func setup(t *testing.T) http.Handler {
 	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, txHash [32]byte, tx string) (*internal.TransactionResult, error) {
 		// Emulate a successful transaction
 		txSuccess := internal.TransactionResult{
+			EnvelopeXdr: tx,
 			Successful:  true,
 			Hash:        hex.EncodeToString(txHash[:]),
-			EnvelopeXdr: tx,
 		}
 		return &txSuccess, nil
 	}
