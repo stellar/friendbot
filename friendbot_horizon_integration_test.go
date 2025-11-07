@@ -25,6 +25,7 @@ var horizonURL = os.Getenv("HORIZON_URL")
 func getNetworkPassphrase(t *testing.T, horizonURL string) string {
 	t.Helper()
 
+	// #nosec G107 - the url is from a trusted source configured in CI or local
 	resp, err := http.Get(horizonURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -47,6 +48,7 @@ func fundAccount(t *testing.T, horizonURL, address string) error {
 
 	friendbotURL := fmt.Sprintf("%s/friendbot?addr=%s", horizonURL, address)
 
+	// #nosec G107 - the url is from a trusted source configured in CI or local
 	resp, err := http.Get(friendbotURL)
 	if err != nil {
 		return err
