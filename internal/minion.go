@@ -133,7 +133,10 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 		span.AddEvent("transaction submission failed")
 		return nil, errors.Wrap(err, errStr)
 	}
-	span.SetAttributes(attribute.String("minion.tx_hash", hex.EncodeToString(txHash[:])))
+	// Populate the transaction hash and envelope XDR
+	result.Hash = hex.EncodeToString(txHash[:])
+	result.EnvelopeXdr = tx
+	span.SetAttributes(attribute.String("minion.tx_hash", result.Hash))
 	span.AddEvent("transaction submission success")
 	span.SetStatus(codes.Ok, codes.Ok.String())
 	return result, nil

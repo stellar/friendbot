@@ -26,7 +26,9 @@ type NetworkClient interface {
 
 // TransactionResult contains the minimal information needed about a transaction result.
 type TransactionResult struct {
-	Successful bool
+	Successful  bool   `json:"successful"`
+	Hash        string `json:"hash"`
+	EnvelopeXdr string `json:"envelope_xdr"`
 }
 
 // AccountDetails contains the minimal information needed about an account.
