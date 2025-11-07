@@ -173,11 +173,7 @@ func TestFriendbotAPI_InvalidAddress(t *testing.T) {
 func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 	// Create friendbot with mock that returns account already exists and funded
 	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, txHash [32]byte, tx string) (*internal.TransactionResult, error) {
-		txSuccess := internal.TransactionResult{
-			Successful:  true,
-			Hash:        "test_hash",
-			EnvelopeXdr: "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE=",
-		}
+		txSuccess := internal.TransactionResult{EnvelopeXdr: tx, Successful: true}
 		return &txSuccess, nil
 	}
 
