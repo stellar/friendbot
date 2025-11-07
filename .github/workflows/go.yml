@@ -17,7 +17,7 @@ permissions:
 jobs:
   complete:
     if: always()
-    needs: [lint, build, test]
+    needs: [lint, build, test, test-integration]
     runs-on: ubuntu-22.04
     steps:
     - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
@@ -66,3 +66,23 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
     - run: go test -race -cover ./...
+
+  test-integration:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+        go: ["1.23"]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        # We need to full history for git-restore-mtime to know what modification dates to use.
+        # Otherwise, the Go test cache will fail (due to the modification time of fixtures changing).
+        fetch-depth: '0'
+    - uses: ./.github/actions/setup-go
+      with:
+        go-version: ${{ matrix.go }}
+    - uses: stellar/actions/quickstart@main
+    - env:
+        HORIZON_URL: http://localhost:8000
+      run: go test -race ./...
