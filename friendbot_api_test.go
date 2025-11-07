@@ -20,7 +20,9 @@ func setup(t *testing.T) http.Handler {
 	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, txHash [32]byte, tx string) (*internal.TransactionResult, error) {
 		// Emulate a successful transaction
 		txSuccess := internal.TransactionResult{
-			Successful: true,
+			Successful:  true,
+			Hash:        "test_hash",
+			EnvelopeXdr: "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE=",
 		}
 		return &txSuccess, nil
 	}
@@ -80,53 +82,12 @@ func TestFriendbotAPI_SuccessfulFunding_GET(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Assert the full JSON response matches expected structure
+	// Assert the JSON response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
-          "memo": "",
-          "_links": {
-            "self": {
-              "href": ""
-            },
-            "account": {
-              "href": ""
-            },
-            "ledger": {
-              "href": ""
-            },
-            "operations": {
-              "href": ""
-            },
-            "effects": {
-              "href": ""
-            },
-            "precedes": {
-              "href": ""
-            },
-            "succeeds": {
-              "href": ""
-            },
-            "transaction": {
-              "href": ""
-            }
-          },
-          "id": "",
-          "paging_token": "",
           "successful": true,
           "hash": "test_hash",
-          "ledger": 0,
-          "created_at": "0001-01-01T00:00:00Z",
-          "source_account": "",
-          "source_account_sequence": "0",
-          "fee_account": "",
-          "fee_charged": "0",
-          "max_fee": "0",
-          "operation_count": 0,
-          "envelope_xdr": "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE=",
-          "result_xdr": "",
-          "fee_meta_xdr": "",
-          "memo_type": "",
-          "signatures": null
+          "envelope_xdr": "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE="
         }`
 	assert.JSONEq(t, expectedJSON, body)
 }
@@ -147,53 +108,12 @@ func TestFriendbotAPI_SuccessfulFunding_POST(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Assert the full JSON response matches expected structure
+	// Assert the JSON response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
-          "memo": "",
-          "_links": {
-            "self": {
-              "href": ""
-            },
-            "account": {
-              "href": ""
-            },
-            "ledger": {
-              "href": ""
-            },
-            "operations": {
-              "href": ""
-            },
-            "effects": {
-              "href": ""
-            },
-            "precedes": {
-              "href": ""
-            },
-            "succeeds": {
-              "href": ""
-            },
-            "transaction": {
-              "href": ""
-            }
-          },
-          "id": "",
-          "paging_token": "",
           "successful": true,
           "hash": "test_hash",
-          "ledger": 0,
-          "created_at": "0001-01-01T00:00:00Z",
-          "source_account": "",
-          "source_account_sequence": "0",
-          "fee_account": "",
-          "fee_charged": "0",
-          "max_fee": "0",
-          "operation_count": 0,
-          "envelope_xdr": "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE=",
-          "result_xdr": "",
-          "fee_meta_xdr": "",
-          "memo_type": "",
-          "signatures": null
+          "envelope_xdr": "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE="
         }`
 	assert.JSONEq(t, expectedJSON, body)
 }
@@ -253,7 +173,11 @@ func TestFriendbotAPI_InvalidAddress(t *testing.T) {
 func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 	// Create friendbot with mock that returns account already exists and funded
 	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, txHash [32]byte, tx string) (*internal.TransactionResult, error) {
-		txSuccess := internal.TransactionResult{Successful: true}
+		txSuccess := internal.TransactionResult{
+			Successful:  true,
+			Hash:        "test_hash",
+			EnvelopeXdr: "AAAAAgAAAAD4Az3jKU6lbzq/L5HG9/GzBT+FYusOz71oyYMbZkP+GAAAAGQAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAAAAPXQ8gjyrVHa47a6JDPkVHwPPDKxNRE2QBcamA4JvlOGAAAAAAAAAADShvreeub1LWzv6W93J+BROl6MxA6GAyXFy86/NQWGFAAAABdIdugAAAAAAAAAAAJmQ/4YAAAAQDRLEljDVYALnTk9mDceQEd5PrjQyE3LUAjstIyTWH5t/TP909F66TgEfBFKMxSKF6fka7ZuPcSs40ix4AomEgoJvlOGAAAAQPSGs88OwXubz7UT6nFhvhF47EQfaOsmiIsOkjgzUrmBoypJQTmMMbgeix0kdbfHqS75+iefJpdXLNFDreGnxgE=",
+		}
 		return &txSuccess, nil
 	}
 
