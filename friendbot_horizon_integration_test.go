@@ -19,6 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// This horizon instance must be configured with a working friendbot
+// endpoint as these tests depend on the horizon friendbot to setup
+// accounts for the friendbot in these tests to use.
 var horizonURL = os.Getenv("HORIZON_URL")
 
 // getNetworkPassphrase fetches the network passphrase from the horizon root endpoint
