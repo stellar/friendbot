@@ -79,7 +79,7 @@ func fundAccount(t *testing.T, horizonURL, address string) error {
 	return nil
 }
 
-// Setup creates a test friendbot with real horizon client.
+// Setup creates running instance of friendbot from current code and requires an external instance of horizon that has been configured with its own separate instance of friendbot to support funding accounts. These tests utilize that to fund new minion and bot accounts on target network used by this local friendbot instance being tested.
 func setupHorizonIntegration(t *testing.T) http.Handler {
 	t.Helper()
 
