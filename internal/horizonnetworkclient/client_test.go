@@ -146,8 +146,8 @@ func TestNetworkClient_SubmitTransaction_HorizonError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, result)
 
-	networkErr, ok := err.(*NetworkError)
-	assert.True(t, ok)
+	 var networkErr *NetworkError
+	 assert.ErrorAs(t, err, &networkErr)
 	assert.True(t, networkErr.IsNotFound())
 
 	mockClient.AssertExpectations(t)
