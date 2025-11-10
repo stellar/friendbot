@@ -83,7 +83,7 @@ func fundAccount(t *testing.T, horizonURL, address string) error {
 }
 
 // Setup creates running instance of friendbot from current code and requires an external instance of horizon that has been configured with its own separate instance of friendbot to support funding accounts. These tests utilize that to fund new minion and bot accounts on target network used by this local friendbot instance being tested.
-func setupHorizonIntegration(t *testing.T) http.Handler {
+func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientInterface) {
 	t.Helper()
 
 	if horizonURL == "" {
@@ -136,11 +136,11 @@ func setupHorizonIntegration(t *testing.T) http.Handler {
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
-	return router
+	return router, hclient
 }
 
 func TestFriendbotHorizonIntegration_SuccessfulFunding_GET(t *testing.T) {
-	router := setupHorizonIntegration(t)
+	router, hclient := setupHorizonIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -162,10 +162,24 @@ func TestFriendbotHorizonIntegration_SuccessfulFunding_GET(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, result.Successful)
 	assert.NotEmpty(t, result.Hash)
+
+	// Check that the recipient account has the expected balance
+	accountRequest := horizonclient.AccountRequest{AccountID: recipientAddress}
+	accountDetails, err := hclient.AccountDetail(accountRequest)
+	require.NoError(t, err)
+
+	var balance string
+	for _, b := range accountDetails.Balances {
+		if b.Type == "native" {
+			balance = b.Balance
+			break
+		}
+	}
+	assert.Equal(t, "1000.0000000", balance)
 }
 
 func TestFriendbotHorizonIntegration_SuccessfulFunding_POST(t *testing.T) {
-	router := setupHorizonIntegration(t)
+	router, hclient := setupHorizonIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -191,10 +205,24 @@ func TestFriendbotHorizonIntegration_SuccessfulFunding_POST(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, result.Successful)
 	assert.NotEmpty(t, result.Hash)
+
+	// Check that the recipient account has the expected balance
+	accountRequest := horizonclient.AccountRequest{AccountID: recipientAddress}
+	accountDetails, err := hclient.AccountDetail(accountRequest)
+	require.NoError(t, err)
+
+	var balance string
+	for _, b := range accountDetails.Balances {
+		if b.Type == "native" {
+			balance = b.Balance
+			break
+		}
+	}
+	assert.Equal(t, "1000.0000000", balance)
 }
 
 func TestFriendbotHorizonIntegration_MissingAddressParameter(t *testing.T) {
-	router := setupHorizonIntegration(t)
+	router, _ := setupHorizonIntegration(t)
 
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
@@ -219,7 +247,7 @@ func TestFriendbotHorizonIntegration_MissingAddressParameter(t *testing.T) {
 }
 
 func TestFriendbotHorizonIntegration_InvalidAddress(t *testing.T) {
-	router := setupHorizonIntegration(t)
+	router, _ := setupHorizonIntegration(t)
 
 	invalidAddress := "invalid_address"
 
@@ -246,7 +274,7 @@ func TestFriendbotHorizonIntegration_InvalidAddress(t *testing.T) {
 }
 
 func TestFriendbotHorizonIntegration_AccountAlreadyFunded(t *testing.T) {
-	router := setupHorizonIntegration(t)
+	router, hclient := setupHorizonIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -258,12 +286,39 @@ func TestFriendbotHorizonIntegration_AccountAlreadyFunded(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
+	// Check that the recipient account has the expected balance after first funding
+	accountRequest := horizonclient.AccountRequest{AccountID: recipientAddress}
+	accountDetails, err := hclient.AccountDetail(accountRequest)
+	require.NoError(t, err)
+
+	var balance string
+	for _, b := range accountDetails.Balances {
+		if b.Type == "native" {
+			balance = b.Balance
+			break
+		}
+	}
+	assert.Equal(t, "1000.0000000", balance)
+
 	// Second funding attempt - should fail (either with account already funded or transaction error)
 	req2 := httptest.NewRequest("GET", "/?addr="+recipientAddress, nil)
 	w2 := httptest.NewRecorder()
 	router.ServeHTTP(w2, req2)
 
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
+
+	// Check that the balance hasn't changed after the failed funding attempt
+	accountDetails2, err := hclient.AccountDetail(accountRequest)
+	require.NoError(t, err)
+
+	var balance2 string
+	for _, b := range accountDetails2.Balances {
+		if b.Type == "native" {
+			balance2 = b.Balance
+			break
+		}
+	}
+	assert.Equal(t, balance, balance2)
 
 	// Assert the full JSON error response matches expected structure
 	body := w2.Body.String()
@@ -277,7 +332,7 @@ func TestFriendbotHorizonIntegration_AccountAlreadyFunded(t *testing.T) {
 }
 
 func TestFriendbotHorizonIntegration_404NotFound(t *testing.T) {
-	router := setupHorizonIntegration(t)
+	router, _ := setupHorizonIntegration(t)
 
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
 	w := httptest.NewRecorder()
