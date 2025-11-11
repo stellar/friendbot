@@ -2,12 +2,11 @@ package internal
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/stellar/go/amount"
-	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
-	hProtocol "github.com/stellar/go/protocols/horizon"
 	"github.com/stellar/go/support/errors"
 	"github.com/stellar/go/txnbuild"
 	"go.opentelemetry.io/otel"
@@ -29,15 +28,15 @@ type Minion struct {
 	Keypair         *keypair.Full
 	BotAccount      txnbuild.Account
 	BotKeypair      *keypair.Full
-	Horizon         horizonclient.ClientInterface
+	NetworkClient   NetworkClient
 	Network         string
 	StartingBalance string
 	BaseFee         int64
 
 	// Mockable functions
-	SubmitTransaction    func(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (*hProtocol.Transaction, error)
-	CheckSequenceRefresh func(minion *Minion, hclient horizonclient.ClientInterface) error
-	CheckAccountExists   func(minion *Minion, hclient horizonclient.ClientInterface, destAddress string) (bool, string, error)
+	SubmitTransaction    func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error)
+	CheckSequenceRefresh func(minion *Minion, networkClient NetworkClient) error
+	CheckAccountExists   func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error)
 
 	// Uninitialized.
 	forceRefreshSequence bool
@@ -49,7 +48,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 	ctx, span := botTracer.Start(ctx, "minion.run.pay_minion")
 	defer span.End()
 	span.SetAttributes(attribute.String("minion.account_id", minion.Account.AccountID))
-	err := minion.CheckSequenceRefresh(minion, minion.Horizon)
+	err := minion.CheckSequenceRefresh(minion, minion.NetworkClient)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
@@ -57,7 +56,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 		}
 		return
 	}
-	exists, balance, err := minion.CheckAccountExists(minion, minion.Horizon, destAddress)
+	exists, balance, err := minion.CheckAccountExists(minion, minion.NetworkClient, destAddress)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
@@ -94,7 +93,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 		}
 		return
 	}
-	succ, err := minion.SubmitTransaction(ctx, minion, minion.Horizon, txStr)
+	succ, err := minion.SubmitTransaction(ctx, minion, minion.NetworkClient, txHash, txStr)
 	resultChan <- SubmitResult{
 		maybeTransactionSuccess: succ,
 		maybeErr:                errors.Wrapf(err, "submitting tx to minion %x", txHash),
@@ -106,25 +105,25 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 }
 
 // SubmitTransaction should be passed to the Minion.
-func SubmitTransaction(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (*hProtocol.Transaction, error) {
+func SubmitTransaction(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
 	_, span := botTracer.Start(ctx, "minion.submit_transaction")
 	defer span.End()
 
-	result, err := hclient.SubmitTransactionXDR(tx)
+	result, err := networkClient.SubmitTransaction(tx)
 	if err != nil {
 		errStr := "submitting tx to horizon"
 		switch e := err.(type) {
-		case *horizonclient.Error:
+		case NetworkError:
 			minion.checkHandleBadSequence(e)
 			resStr, resErr := e.ResultString()
 			if resErr != nil {
-				errStr += ": error getting horizon error code: " + resErr.Error()
+				errStr += ": error getting network error code: " + resErr.Error()
 			} else if resStr == createAccountAlreadyExistXDR {
 				span.SetStatus(codes.Error, errStr)
 				span.AddEvent("transaction submission failed")
 				return nil, errors.Wrap(ErrAccountExists, errStr)
 			} else {
-				errStr += ": horizon error string: " + resStr
+				errStr += ": network error string: " + resStr
 			}
 			span.SetStatus(codes.Error, errStr)
 			span.AddEvent("transaction submission failed")
@@ -134,19 +133,22 @@ func SubmitTransaction(ctx context.Context, minion *Minion, hclient horizonclien
 		span.AddEvent("transaction submission failed")
 		return nil, errors.Wrap(err, errStr)
 	}
+	// Populate the transaction hash and envelope XDR
+	result.Hash = hex.EncodeToString(txHash[:])
+	result.EnvelopeXdr = tx
 	span.SetAttributes(attribute.String("minion.tx_hash", result.Hash))
 	span.AddEvent("transaction submission success")
 	span.SetStatus(codes.Ok, codes.Ok.String())
-	return &result, nil
+	return result, nil
 }
 
 // CheckSequenceRefresh establishes the minion's initial sequence number, if needed.
 // This should also be passed to the minion.
-func CheckSequenceRefresh(minion *Minion, hclient horizonclient.ClientInterface) error {
+func CheckSequenceRefresh(minion *Minion, networkClient NetworkClient) error {
 	if minion.Account.Sequence != 0 && !minion.forceRefreshSequence {
 		return nil
 	}
-	err := minion.Account.RefreshSequenceNumber(hclient)
+	err := minion.Account.RefreshSequenceNumber(networkClient)
 	if err != nil {
 		return errors.Wrap(err, "refreshing minion seqnum")
 	}
@@ -157,30 +159,21 @@ func CheckSequenceRefresh(minion *Minion, hclient horizonclient.ClientInterface)
 // CheckAccountExists checks if the specified address exists as a Stellar account.
 // And returns the current native balance of the account also.
 // This should also be passed to the minion.
-func CheckAccountExists(minion *Minion, hclient horizonclient.ClientInterface, address string) (bool, string, error) {
-	accountRequest := horizonclient.AccountRequest{AccountID: address}
-	accountDetails, err := hclient.AccountDetail(accountRequest)
+func CheckAccountExists(minion *Minion, networkClient NetworkClient, address string) (bool, string, error) {
+	accountDetails, err := networkClient.GetAccountDetails(address)
 	switch e := err.(type) {
 	case nil:
-		balance := "0"
-		for _, b := range accountDetails.Balances {
-			if b.Type == "native" {
-				balance = b.Balance
-				break
-			}
-		}
-		return true, balance, nil
-	case *horizonclient.Error:
-		if e.Response.StatusCode == 404 {
+		return true, accountDetails.Balance, nil
+	case NetworkError:
+		if e.IsNotFound() {
 			return false, "0", nil
 		}
 	}
 	return false, "0", err
 }
 
-func (minion *Minion) checkHandleBadSequence(err *horizonclient.Error) {
-	resCode, e := err.ResultCodes()
-	isTxBadSeqCode := e == nil && resCode.TransactionCode == "tx_bad_seq"
+func (minion *Minion) checkHandleBadSequence(err NetworkError) {
+	isTxBadSeqCode := err.IsBadSequence()
 	if !isTxBadSeqCode {
 		return
 	}
