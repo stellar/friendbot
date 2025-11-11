@@ -17,7 +17,7 @@ type NetworkError interface {
 // It abstracts the functionality needed for friendbot operations, allowing different
 // implementations (Horizon, RPC, etc.) to be used interchangeably.
 type NetworkClient interface {
-	// SubmitTransaction submits a transaction in XDR format and returns the result.
+	// SubmitTransaction submits a transaction and blocks until it can return a result.
 	SubmitTransaction(txXDR string) (*TransactionResult, error)
 
 	// GetAccountDetails retrieves account information for the given account ID.
