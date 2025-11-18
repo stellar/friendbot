@@ -156,13 +156,15 @@ func TestFriendbotHorizonIntegration_SuccessfulFunding_GET(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
 	var result struct {
-		Hash       string `json:"hash"`
-		Successful bool   `json:"successful"`
+		Hash        string `json:"hash"`
+		Successful  bool   `json:"successful"`
+		EnvelopeXdr string `json:"envelope_xdr"`
 	}
 	err = json.Unmarshal([]byte(body), &result)
 	require.NoError(t, err)
 	assert.Equal(t, true, result.Successful)
 	assert.NotEmpty(t, result.Hash)
+	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Check that the recipient account has the expected balance
 	accountRequest := horizonclient.AccountRequest{AccountID: recipientAddress}
@@ -199,13 +201,15 @@ func TestFriendbotHorizonIntegration_SuccessfulFunding_POST(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
 	var result struct {
-		Hash       string `json:"hash"`
-		Successful bool   `json:"successful"`
+		Hash        string `json:"hash"`
+		Successful  bool   `json:"successful"`
+		EnvelopeXdr string `json:"envelope_xdr"`
 	}
 	err = json.Unmarshal([]byte(body), &result)
 	require.NoError(t, err)
 	assert.Equal(t, true, result.Successful)
 	assert.NotEmpty(t, result.Hash)
+	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Check that the recipient account has the expected balance
 	accountRequest := horizonclient.AccountRequest{AccountID: recipientAddress}

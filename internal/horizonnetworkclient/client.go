@@ -68,7 +68,9 @@ func (h *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionRe
 		return nil, err
 	}
 	return &internal.TransactionResult{
-		Successful: result.Successful,
+		Successful:  result.Successful,
+		Hash:        result.Hash,
+		EnvelopeXdr: result.EnvelopeXdr,
 	}, nil
 }
 
