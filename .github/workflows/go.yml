@@ -85,4 +85,5 @@ jobs:
     - uses: stellar/quickstart@main
     - env:
         HORIZON_URL: http://localhost:8000
+        FRIENDBOT_URL: http://localhost:8000/friendbot
       run: go test -race -cover ./...

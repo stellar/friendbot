@@ -24,6 +24,7 @@ import (
 // endpoint as these tests depend on the horizon friendbot to setup
 // accounts for the friendbot in these tests to use.
 var horizonURL = os.Getenv("HORIZON_URL")
+var friendbotURL = os.Getenv("FRIENDBOT_URL")
 
 // getNetworkPassphrase fetches the network passphrase from the horizon root endpoint
 func getNetworkPassphrase(t *testing.T, horizonURL string) string {
@@ -48,14 +49,14 @@ func getNetworkPassphrase(t *testing.T, horizonURL string) string {
 }
 
 // fundAccount uses the friendbot endpoint to fund an account
-func fundAccount(t *testing.T, horizonURL, address string) error {
+func fundAccount(t *testing.T, friendbotURL, address string) error {
 	t.Helper()
 
-	friendbotURL := fmt.Sprintf("%s/friendbot?addr=%s", horizonURL, address)
+	url := fmt.Sprintf("%s?addr=%s", friendbotURL, address)
 
 	// #nosec G107 - the url is from a trusted source configured in CI or local
 	//nolint:noctx
-	resp, err := http.Get(friendbotURL)
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,10 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		t.Skip("HORIZON_URL environment variable not set, skipping horizon integration tests")
 	}
 
+	if friendbotURL == "" {
+		t.Skip("FRIENDBOT_URL environment variable not set, skipping horizon integration tests")
+	}
+
 	// Get network passphrase from horizon
 	networkPassphrase := getNetworkPassphrase(t, horizonURL)
 	startingBalance := "1000.00" // Use smaller amount so bot account keeps reserve
@@ -100,13 +105,13 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 	botKeypair, err := keypair.Random()
 	require.NoError(t, err)
 	botAccount := internal.Account{AccountID: botKeypair.Address()}
-	err = fundAccount(t, horizonURL, botKeypair.Address())
+	err = fundAccount(t, friendbotURL, botKeypair.Address())
 	require.NoError(t, err)
 
 	// Generate random keypair for a minion that will be used for sequence numbers when funding
 	minionKeypair, err := keypair.Random()
 	require.NoError(t, err)
-	err = fundAccount(t, horizonURL, minionKeypair.Address())
+	err = fundAccount(t, friendbotURL, minionKeypair.Address())
 	require.NoError(t, err)
 
 	// Create horizon client
