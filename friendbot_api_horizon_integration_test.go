@@ -31,7 +31,7 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 	}
 
 	// Get network passphrase from horizon
-	networkPassphrase := getNetworkPassphrase(t, horizonURL)
+	networkPassphrase := getNetworkPassphraseFromHorizon(t, horizonURL)
 	startingBalance := "1000.00" // Use smaller amount so bot account keeps reserve
 	baseFee := int64(txnbuild.MinBaseFee)
 
@@ -79,8 +79,8 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 	return router, hclient
 }
 
-// getNetworkPassphrase fetches the network passphrase from the horizon root endpoint
-func getNetworkPassphrase(t *testing.T, horizonURL string) string {
+// getNetworkPassphraseFromHorizon fetches the network passphrase from the horizon root endpoint
+func getNetworkPassphraseFromHorizon(t *testing.T, horizonURL string) string {
 	t.Helper()
 
 	// #nosec G107 - the url is from a trusted source configured in CI or local
