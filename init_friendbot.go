@@ -7,6 +7,7 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/horizonnetworkclient"
+	"github.com/stellar/friendbot/internal/rpcnetworkclient"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/strkey"
@@ -18,25 +19,37 @@ func initFriendbot(
 	friendbotSecret string,
 	networkPassphrase string,
 	horizonURL string,
+	rpcURL string,
 	startingBalance string,
 	numMinions int,
 	baseFee int64,
 	minionBatchSize int,
 	submitTxRetriesAllowed int,
 ) (*internal.Bot, error) {
-	if friendbotSecret == "" || networkPassphrase == "" || horizonURL == "" || startingBalance == "" || numMinions < 0 {
+	if friendbotSecret == "" || networkPassphrase == "" || startingBalance == "" || numMinions < 0 {
 		return nil, errors.New("invalid input param(s)")
+	}
+	if horizonURL == "" && rpcURL == "" {
+		return nil, errors.New("either horizon_url or rpc_url must be provided")
+	}
+	if horizonURL != "" && rpcURL != "" {
+		return nil, errors.New("only one of horizon_url or rpc_url should be provided, not both")
 	}
 
 	// Guarantee that friendbotSecret is a seed, if not blank.
 	strkey.MustDecode(strkey.VersionByteSeed, friendbotSecret)
 
-	hclient := &horizonclient.Client{
-		HorizonURL: horizonURL,
-		HTTP:       http.DefaultClient,
-		AppName:    "friendbot",
+	var networkClient internal.NetworkClient
+	if rpcURL != "" {
+		networkClient = rpcnetworkclient.NewNetworkClient(rpcURL, http.DefaultClient)
+	} else {
+		hclient := &horizonclient.Client{
+			HorizonURL: horizonURL,
+			HTTP:       http.DefaultClient,
+			AppName:    "friendbot",
+		}
+		networkClient = horizonnetworkclient.NewNetworkClient(hclient)
 	}
-	networkClient := horizonnetworkclient.NewNetworkClient(hclient)
 
 	botKP, err := keypair.Parse(friendbotSecret)
 	if err != nil {
