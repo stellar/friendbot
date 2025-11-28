@@ -59,7 +59,7 @@ func NewNetworkClient(client horizonclient.ClientInterface) *NetworkClient {
 }
 
 // SubmitTransaction submits a transaction using the underlying horizon client.
-func (h *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionResult, error) {
+func (h *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionSubmitResult, error) {
 	result, err := h.client.SubmitTransactionXDR(txXDR)
 	if err != nil {
 		if hErr, ok := err.(*horizonclient.Error); ok {
@@ -67,10 +67,8 @@ func (h *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionRe
 		}
 		return nil, err
 	}
-	return &internal.TransactionResult{
-		Successful:  result.Successful,
-		Hash:        result.Hash,
-		EnvelopeXdr: result.EnvelopeXdr,
+	return &internal.TransactionSubmitResult{
+		Successful: result.Successful,
 	}, nil
 }
 

@@ -18,17 +18,15 @@ type NetworkError interface {
 // implementations (Horizon, RPC, etc.) to be used interchangeably.
 type NetworkClient interface {
 	// SubmitTransaction submits a transaction and blocks until it can return a result.
-	SubmitTransaction(txXDR string) (*TransactionResult, error)
+	SubmitTransaction(txXDR string) (*TransactionSubmitResult, error)
 
 	// GetAccountDetails retrieves account information for the given account ID.
 	GetAccountDetails(accountID string) (*AccountDetails, error)
 }
 
-// TransactionResult contains the minimal information needed about a transaction result.
-type TransactionResult struct {
-	Successful  bool   `json:"successful"`
-	Hash        string `json:"hash"`
-	EnvelopeXdr string `json:"envelope_xdr"`
+// TransactionSubmitResult contains the result of submitting a transaction.
+type TransactionSubmitResult struct {
+	Successful bool
 }
 
 // AccountDetails contains the minimal information needed about an account.
