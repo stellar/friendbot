@@ -13,6 +13,8 @@ import (
 	"github.com/stellar/go/xdr"
 )
 
+const submitTransactionTimeout = 30 * time.Second
+
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
 type NetworkError struct {
 	err       error
@@ -85,7 +87,7 @@ func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 // SubmitTransaction submits a transaction using the underlying RPC client.
 // It blocks until the transaction is finalized (SUCCESS or FAILED) or times out after 30 seconds.
 func (r *NetworkClient) SubmitTransaction(txXDR string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
 	defer cancel()
 
 	request := protocol.SendTransactionRequest{

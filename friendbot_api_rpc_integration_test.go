@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -82,7 +83,12 @@ func getNetworkPassphraseFromRPC(t *testing.T, rpcURL string) string {
 	t.Helper()
 
 	payload := `{"jsonrpc": "2.0", "id": 8675309, "method": "getNetwork"}`
-	resp, err := http.Post(rpcURL, "application/json", strings.NewReader(payload))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, rpcURL, strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
