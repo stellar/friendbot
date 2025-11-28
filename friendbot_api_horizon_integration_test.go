@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/horizonnetworkclient"
+	"github.com/stellar/friendbot/testutil"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/txnbuild"
@@ -20,69 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This horizon instance must be configured with a working friendbot
-// endpoint as these tests depend on the horizon friendbot to setup
-// accounts for the friendbot in these tests to use.
 var horizonURL = os.Getenv("HORIZON_URL")
-var friendbotURL = os.Getenv("FRIENDBOT_URL")
-
-// getNetworkPassphrase fetches the network passphrase from the horizon root endpoint
-func getNetworkPassphrase(t *testing.T, horizonURL string) string {
-	t.Helper()
-
-	// #nosec G107 - the url is from a trusted source configured in CI or local
-	//nolint:noctx
-	resp, err := http.Get(horizonURL)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	var root struct {
-		NetworkPassphrase string `json:"network_passphrase"`
-	}
-	err = json.Unmarshal(body, &root)
-	require.NoError(t, err)
-
-	return root.NetworkPassphrase
-}
-
-// fundAccount uses the friendbot endpoint to fund an account
-func fundAccount(t *testing.T, friendbotURL, address string) error {
-	t.Helper()
-
-	url := fmt.Sprintf("%s?addr=%s", friendbotURL, address)
-
-	// #nosec G107 - the url is from a trusted source configured in CI or local
-	//nolint:noctx
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("friendbot returned status %d", resp.StatusCode)
-	}
-
-	var result struct {
-		Successful bool `json:"successful"`
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return err
-	}
-	if !result.Successful {
-		return fmt.Errorf("account funding failed")
-	}
-	return nil
-}
 
 // Setup creates running instance of friendbot from current code and requires an external instance of horizon that has been configured with its own separate instance of friendbot to support funding accounts. These tests utilize that to fund new minion and bot accounts on target network used by this local friendbot instance being tested.
 func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientInterface) {
@@ -90,10 +28,6 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 
 	if horizonURL == "" {
 		t.Skip("HORIZON_URL environment variable not set, skipping horizon integration tests")
-	}
-
-	if friendbotURL == "" {
-		t.Skip("FRIENDBOT_URL environment variable not set, skipping horizon integration tests")
 	}
 
 	// Get network passphrase from horizon
@@ -105,13 +39,13 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 	botKeypair, err := keypair.Random()
 	require.NoError(t, err)
 	botAccount := internal.Account{AccountID: botKeypair.Address()}
-	err = fundAccount(t, friendbotURL, botKeypair.Address())
+	err = testutil.FundAccount(t, botKeypair.Address())
 	require.NoError(t, err)
 
 	// Generate random keypair for a minion that will be used for sequence numbers when funding
 	minionKeypair, err := keypair.Random()
 	require.NoError(t, err)
-	err = fundAccount(t, friendbotURL, minionKeypair.Address())
+	err = testutil.FundAccount(t, minionKeypair.Address())
 	require.NoError(t, err)
 
 	// Create horizon client
@@ -143,6 +77,28 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 	cfg := Config{}
 	router := initRouter(cfg, fb)
 	return router, hclient
+}
+
+// getNetworkPassphrase fetches the network passphrase from the horizon root endpoint
+func getNetworkPassphrase(t *testing.T, horizonURL string) string {
+	t.Helper()
+
+	// #nosec G107 - the url is from a trusted source configured in CI or local
+	//nolint:noctx
+	resp, err := http.Get(horizonURL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var root struct {
+		NetworkPassphrase string `json:"network_passphrase"`
+	}
+	err = json.Unmarshal(body, &root)
+	require.NoError(t, err)
+
+	return root.NetworkPassphrase
 }
 
 func TestFriendbotHorizonIntegration_SuccessfulFunding_GET(t *testing.T) {
