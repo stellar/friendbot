@@ -1,6 +1,7 @@
 package horizonnetworkclient
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/stellar/friendbot/internal"
@@ -59,17 +60,16 @@ func NewNetworkClient(client horizonclient.ClientInterface) *NetworkClient {
 }
 
 // SubmitTransaction submits a transaction using the underlying horizon client.
-func (h *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionSubmitResult, error) {
-	result, err := h.client.SubmitTransactionXDR(txXDR)
+func (h *NetworkClient) SubmitTransaction(txXDR string) error {
+	resp, err := h.client.SubmitTransactionXDR(txXDR)
 	if err != nil {
+		log.Printf("%+v\n", resp)
 		if hErr, ok := err.(*horizonclient.Error); ok {
-			return nil, NewNetworkError(hErr)
+			return NewNetworkError(hErr)
 		}
-		return nil, err
+		return err
 	}
-	return &internal.TransactionSubmitResult{
-		Successful: result.Successful,
-	}, nil
+	return nil
 }
 
 // GetAccountDetails retrieves account details using the underlying horizon client.

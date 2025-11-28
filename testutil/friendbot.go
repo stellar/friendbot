@@ -1,9 +1,7 @@
 package testutil
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -34,20 +32,5 @@ func FundAccount(t *testing.T, address string) error {
 		return fmt.Errorf("friendbot returned status %d", resp.StatusCode)
 	}
 
-	var result struct {
-		Successful bool `json:"successful"`
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return err
-	}
-	if !result.Successful {
-		return fmt.Errorf("account funding failed")
-	}
 	return nil
 }

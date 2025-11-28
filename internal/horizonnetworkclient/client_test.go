@@ -115,16 +115,13 @@ func TestNetworkError_Unwrap(t *testing.T) {
 
 func TestNetworkClient_SubmitTransaction_Success(t *testing.T) {
 	mockClient := &horizonclient.MockClient{}
-	expectedResult := horizon.Transaction{Successful: true}
 
-	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(expectedResult, nil)
+	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(horizon.Transaction{}, nil)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.SubmitTransaction("test-xdr")
+	err := client.SubmitTransaction("test-xdr")
 
 	assert.NoError(t, err)
-	assert.NotNil(t, result)
-	assert.True(t, result.Successful)
 	mockClient.AssertExpectations(t)
 }
 
@@ -141,10 +138,9 @@ func TestNetworkClient_SubmitTransaction_HorizonError(t *testing.T) {
 	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(horizon.Transaction{}, horizonErr)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.SubmitTransaction("test-xdr")
+	err := client.SubmitTransaction("test-xdr")
 
 	assert.Error(t, err)
-	assert.Nil(t, result)
 
 	var networkErr *NetworkError
 	assert.ErrorAs(t, err, &networkErr)
@@ -160,10 +156,9 @@ func TestNetworkClient_SubmitTransaction_GenericError(t *testing.T) {
 	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(horizon.Transaction{}, genericErr)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.SubmitTransaction("test-xdr")
+	err := client.SubmitTransaction("test-xdr")
 
 	assert.Error(t, err)
-	assert.Nil(t, result)
 	assert.Equal(t, genericErr, err)
 
 	mockClient.AssertExpectations(t)

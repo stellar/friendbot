@@ -140,9 +140,8 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 			return minions, errors.Wrap(err, "unable to serialize tx")
 		}
 
-		resp, err := networkClient.SubmitTransaction(txe)
+		err = networkClient.SubmitTransaction(txe)
 		if err != nil {
-			log.Printf("%+v\n", resp)
 			switch e := err.(type) {
 			case internal.NetworkError:
 				// If we hit an error here due to network congestion, try again until we hit max # of retries allowed
