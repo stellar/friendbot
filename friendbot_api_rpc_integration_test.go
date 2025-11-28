@@ -334,7 +334,7 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 	bumpSeqTxXDR, err := bumpSeqTx.Base64()
 	require.NoError(t, err)
 
-	_, err = rpcClient.SubmitTransaction(bumpSeqTxXDR)
+	err = rpcClient.SubmitTransaction(bumpSeqTxXDR)
 	require.NoError(t, err)
 
 	// Check balance after bump seq tx - should be slightly lower due to fees

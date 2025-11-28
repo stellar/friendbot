@@ -109,7 +109,7 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 	_, span := botTracer.Start(ctx, "minion.submit_transaction")
 	defer span.End()
 
-	submitResult, err := networkClient.SubmitTransaction(tx)
+	err := networkClient.SubmitTransaction(tx)
 	if err != nil {
 		errStr := "submitting tx to horizon"
 		switch e := err.(type) {
@@ -135,7 +135,7 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 	}
 	// Construct the final transaction result with hash and envelope XDR
 	result := &TransactionResult{
-		Successful:  submitResult.Successful,
+		Successful:  true,
 		Hash:        hex.EncodeToString(txHash[:]),
 		EnvelopeXdr: tx,
 	}

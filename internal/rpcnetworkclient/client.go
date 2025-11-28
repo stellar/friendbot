@@ -84,7 +84,7 @@ func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 
 // SubmitTransaction submits a transaction using the underlying RPC client.
 // It blocks until the transaction is finalized (SUCCESS or FAILED) or times out after 30 seconds.
-func (r *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionSubmitResult, error) {
+func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -94,12 +94,12 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionSu
 
 	response, err := r.client.SendTransaction(ctx, request)
 	if err != nil {
-		return nil, &NetworkError{err: err}
+		return &NetworkError{err: err}
 	}
 
 	// If the transaction was rejected immediately, return the error
 	if response.Status == "ERROR" {
-		return nil, &NetworkError{err: fmt.Errorf("transaction rejected"), resultXDR: response.ErrorResultXDR}
+		return &NetworkError{err: fmt.Errorf("transaction rejected"), resultXDR: response.ErrorResultXDR}
 	}
 
 	// Poll GetTransaction until the transaction is finalized
@@ -107,7 +107,7 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionSu
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, &NetworkError{err: fmt.Errorf("timeout waiting for transaction %s to finalize", txHash), timeout: true}
+			return &NetworkError{err: fmt.Errorf("timeout waiting for transaction %s to finalize", txHash), timeout: true}
 		default:
 		}
 
@@ -115,16 +115,14 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) (*internal.TransactionSu
 			Hash: txHash,
 		})
 		if err != nil {
-			return nil, &NetworkError{err: err}
+			return &NetworkError{err: err}
 		}
 
 		switch txResponse.Status {
 		case protocol.TransactionStatusSuccess:
-			return &internal.TransactionSubmitResult{
-				Successful: true,
-			}, nil
+			return nil
 		case protocol.TransactionStatusFailed:
-			return nil, &NetworkError{err: fmt.Errorf("transaction failed"), resultXDR: txResponse.ResultXDR}
+			return &NetworkError{err: fmt.Errorf("transaction failed"), resultXDR: txResponse.ResultXDR}
 		case protocol.TransactionStatusNotFound:
 			// Transaction not yet processed, wait and retry
 			time.Sleep(1 * time.Second)
