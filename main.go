@@ -127,6 +127,7 @@ func newMux(cfg Config) *chi.Mux {
 }
 
 func registerProblems() {
+	problem.DefaultServiceHost = "https://stellar.org/friendbot-errors/"
 	problem.RegisterError(sql.ErrNoRows, problem.NotFound)
 
 	accountExistsProblem := problem.BadRequest
