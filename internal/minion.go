@@ -111,7 +111,7 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 
 	err := networkClient.SubmitTransaction(tx)
 	if err != nil {
-		errStr := "submitting tx to horizon"
+		errStr := "submitting tx"
 		switch e := err.(type) {
 		case NetworkError:
 			minion.checkHandleBadSequence(e)
