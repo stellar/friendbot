@@ -63,7 +63,6 @@ func NewNetworkClient(client horizonclient.ClientInterface) *NetworkClient {
 func (h *NetworkClient) SubmitTransaction(txXDR string) error {
 	resp, err := h.client.SubmitTransactionXDR(txXDR)
 	if err != nil {
-		log.Printf("%+v\n", resp)
 		if hErr, ok := err.(*horizonclient.Error); ok {
 			return NewNetworkError(hErr)
 		}
