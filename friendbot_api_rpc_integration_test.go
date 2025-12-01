@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -98,6 +99,8 @@ func setupRPCIntegration(t *testing.T) *rpcIntegrationSetup {
 
 // getContractBalance queries the native SAC contract's balance function to get the XLM balance
 // of a contract address. Returns the balance as a string in stroops.
+//
+//nolint:unparam // contractAddress varies in actual use, tests happen to use same value
 func getContractBalance(t *testing.T, setup *rpcIntegrationSetup, contractAddress string) int64 {
 	t.Helper()
 
@@ -185,10 +188,11 @@ func getContractBalance(t *testing.T, setup *rpcIntegrationSetup, contractAddres
 	require.Equal(t, xdr.ScValTypeScvI128, resultVal.Type, "expected i128 result type")
 
 	i128 := resultVal.MustI128()
-	// For balances that fit in int64, the high part should be 0
+	// For balances that fit in int64, the high part should be 0 and low part should not overflow
 	require.Equal(t, int64(0), int64(i128.Hi), "balance too large for int64")
+	require.LessOrEqual(t, i128.Lo, uint64(math.MaxInt64), "balance overflows int64")
 
-	return int64(i128.Lo)
+	return int64(i128.Lo) //nolint:gosec // overflow checked above
 }
 
 // getNetworkPassphraseFromRPC fetches the network passphrase from the RPC getNetwork method
