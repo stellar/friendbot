@@ -207,7 +207,7 @@ func TestFriendbotRPCIntegration_MissingAddressParameter(t *testing.T) {
 	// Assert the full JSON error response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
-          "type": "https://stellar.org/horizon-errors/bad_request",
+          "type": "https://stellar.org/friendbot-errors/bad_request",
           "title": "Bad Request",
           "status": 400,
           "detail": "The request you sent was invalid in some way.",
@@ -234,7 +234,7 @@ func TestFriendbotRPCIntegration_InvalidAddress(t *testing.T) {
 	// Assert the full JSON error response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
-          "type": "https://stellar.org/horizon-errors/bad_request",
+          "type": "https://stellar.org/friendbot-errors/bad_request",
           "title": "Bad Request",
           "status": 400,
           "detail": "The request you sent was invalid in some way.",
@@ -284,7 +284,7 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 	// Assert the full JSON error response matches expected structure
 	body := w2.Body.String()
 	expectedJSON := `{
-          "type": "https://stellar.org/horizon-errors/bad_request",
+          "type": "https://stellar.org/friendbot-errors/bad_request",
           "title": "Bad Request",
           "status": 400,
           "detail": "account already funded to starting balance"
@@ -392,7 +392,7 @@ func TestFriendbotRPCIntegration_404NotFound(t *testing.T) {
 	// Assert the full JSON error response matches expected structure
 	body := w.Body.String()
 	expectedJSON := `{
-          "type": "https://stellar.org/horizon-errors/not_found",
+          "type": "https://stellar.org/friendbot-errors/not_found",
           "title": "Resource Missing",
           "status": 404,
           "detail": "The resource at the url requested was not found.  This usually occurs for one of two reasons:  The url requested is not valid, or no data in our database could be found with the parameters provided."
