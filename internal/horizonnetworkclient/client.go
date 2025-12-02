@@ -1,12 +1,16 @@
 package horizonnetworkclient
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/clients/horizonclient"
 )
+
+// ErrSimulationNotSupported is returned when SimulateTransaction is called on a Horizon client.
+var ErrSimulationNotSupported = errors.New("transaction simulation is not supported by Horizon, use RPC instead")
 
 // NetworkError wraps a horizon error and implements the internal.NetworkError interface.
 type NetworkError struct {
@@ -95,4 +99,10 @@ func (h *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDe
 		Sequence: account.Sequence,
 		Balance:  nativeBalance,
 	}, nil
+}
+
+// SimulateTransaction returns an error as Horizon does not support transaction simulation.
+// To fund contracts (C addresses), use RPC instead.
+func (h *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+	return nil, ErrSimulationNotSupported
 }

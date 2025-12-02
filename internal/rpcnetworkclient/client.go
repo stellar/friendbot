@@ -137,6 +137,45 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	}
 }
 
+// SimulateTransaction simulates a transaction using the underlying RPC client.
+// This is required for Soroban transactions to get resource fees and auth entries.
+func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
+	defer cancel()
+
+	request := protocol.SimulateTransactionRequest{
+		Transaction: txXDR,
+	}
+
+	response, err := r.client.SimulateTransaction(ctx, request)
+	if err != nil {
+		return nil, &NetworkError{err: err}
+	}
+
+	if response.Error != "" {
+		return nil, &NetworkError{err: fmt.Errorf("simulation error: %s", response.Error)}
+	}
+
+	// Collect auth entries and result from all results
+	var authXDR []string
+	var resultXDR string
+	for _, result := range response.Results {
+		if result.AuthXDR != nil {
+			authXDR = append(authXDR, *result.AuthXDR...)
+		}
+		if result.ReturnValueXDR != nil && resultXDR == "" {
+			resultXDR = *result.ReturnValueXDR
+		}
+	}
+
+	return &internal.SimulateTransactionResult{
+		TransactionDataXDR: response.TransactionDataXDR,
+		MinResourceFee:     response.MinResourceFee,
+		AuthXDR:            authXDR,
+		ResultXDR:          resultXDR,
+	}, nil
+}
+
 // GetAccountDetails retrieves account details using the underlying RPC client.
 func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
 	// We need to get the raw account entry to access balance information
