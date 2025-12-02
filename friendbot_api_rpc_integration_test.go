@@ -13,7 +13,7 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/rpcnetworkclient"
-	"github.com/stellar/friendbot/testutil"
+	"github.com/stellar/friendbot/internal/testutil"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/txnbuild"
 	"github.com/stretchr/testify/assert"
