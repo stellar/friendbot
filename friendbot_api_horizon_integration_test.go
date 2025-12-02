@@ -11,7 +11,7 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/horizonnetworkclient"
-	"github.com/stellar/friendbot/testutil"
+	"github.com/stellar/friendbot/internal/testutil"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/txnbuild"
