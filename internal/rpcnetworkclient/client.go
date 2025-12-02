@@ -3,6 +3,7 @@ package rpcnetworkclient
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -102,6 +103,12 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 
 	// If the transaction was rejected immediately, return the error
 	if response.Status == "ERROR" {
+		if len(response.DiagnosticEventsXDR) > 0 {
+			log.Printf("transaction rejected with %d diagnostic events:", len(response.DiagnosticEventsXDR))
+			for i, eventXDR := range response.DiagnosticEventsXDR {
+				log.Printf("  event %d: %s", i, eventXDR)
+			}
+		}
 		return &NetworkError{err: fmt.Errorf("transaction rejected"), resultXDR: response.ErrorResultXDR}
 	}
 
