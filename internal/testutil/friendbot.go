@@ -7,13 +7,11 @@ import (
 	"testing"
 )
 
-// friendbotURL is the URL of the friendbot endpoint used for testing.
-var friendbotURL = os.Getenv("FRIENDBOT_URL")
-
 // FundAccount uses the friendbot endpoint to fund an account
 func FundAccount(t *testing.T, address string) error {
 	t.Helper()
 
+	friendbotURL := os.Getenv("FRIENDBOT_URL")
 	if friendbotURL == "" {
 		t.Skip("FRIENDBOT_URL environment variable not set, skipping test")
 	}

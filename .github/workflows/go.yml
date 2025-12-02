@@ -84,6 +84,7 @@ jobs:
         go-version: ${{ matrix.go }}
     - uses: stellar/quickstart@main
     - env:
+        NETWORK_PASSPHRASE: Standalone Network ; February 2017
         HORIZON_URL: http://localhost:8000
         FRIENDBOT_URL: http://localhost:8000/friendbot
       run: go test -race -cover ./...
