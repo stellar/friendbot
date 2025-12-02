@@ -5,9 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
-	hProtocol "github.com/stellar/go/protocols/horizon"
 	"github.com/stellar/go/support/errors"
 	"github.com/stellar/go/txnbuild"
 	"github.com/stretchr/testify/assert"
@@ -19,15 +17,15 @@ import (
 func TestMinion_NoChannelErrors(t *testing.T) {
 	ctx := context.Background()
 
-	mockSubmitTransaction := func(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (txn *hProtocol.Transaction, err error) {
-		return txn, nil
+	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
+		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckSequenceRefresh := func(minion *Minion, hclient horizonclient.ClientInterface) (err error) {
+	mockCheckSequenceRefresh := func(minion *Minion, networkClient NetworkClient) error {
 		return errors.New("could not refresh sequence")
 	}
 
-	mockCheckAccountExists := func(minion *Minion, hclient horizonclient.ClientInterface, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -88,18 +86,18 @@ func TestMinion_CorrectNumberOfTxSubmissions(t *testing.T) {
 		mux          sync.Mutex
 	)
 
-	mockSubmitTransaction := func(ctx context.Context, minion *Minion, hclient horizonclient.ClientInterface, tx string) (txn *hProtocol.Transaction, err error) {
+	mockSubmitTransaction := func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
 		mux.Lock()
 		numTxSubmits++
 		mux.Unlock()
-		return txn, nil
+		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckSequenceRefresh := func(minion *Minion, hclient horizonclient.ClientInterface) (err error) {
+	mockCheckSequenceRefresh := func(minion *Minion, networkClient NetworkClient) error {
 		return nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, hclient horizonclient.ClientInterface, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
