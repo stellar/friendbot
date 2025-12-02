@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/amount"
 	rpcclient "github.com/stellar/go/clients/rpcclient"
@@ -106,35 +107,40 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 
 	// Poll GetTransaction until the transaction is finalized
 	txHash := response.Hash
-	for {
-		select {
-		case <-ctx.Done():
-			return &NetworkError{err: fmt.Errorf("timeout waiting for transaction %s to finalize", txHash), timeout: true}
-		default:
-		}
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = 500 * time.Millisecond
+	b.MaxInterval = 3500 * time.Millisecond
+	b.MaxElapsedTime = submitTransactionTimeout
 
+	var finalErr error
+	err = backoff.Retry(func() error {
 		txResponse, err := r.client.GetTransaction(ctx, protocol.GetTransactionRequest{
 			Hash: txHash,
 		})
 		if err != nil {
-			return &NetworkError{err: err}
+			finalErr = &NetworkError{err: err}
+			return backoff.Permanent(finalErr)
 		}
 
 		switch txResponse.Status {
 		case protocol.TransactionStatusSuccess:
 			return nil
 		case protocol.TransactionStatusFailed:
-			return &NetworkError{err: fmt.Errorf("transaction failed"), resultXDR: txResponse.ResultXDR}
-		case protocol.TransactionStatusNotFound:
-			// Transaction not yet processed, wait and retry
-			time.Sleep(1 * time.Second)
-			continue
+			finalErr = &NetworkError{err: fmt.Errorf("transaction failed"), resultXDR: txResponse.ResultXDR}
+			return backoff.Permanent(finalErr)
 		default:
-			// Unknown status, wait and retry
-			time.Sleep(1 * time.Second)
-			continue
+			// Transaction not yet processed, retry with backoff
+			return fmt.Errorf("transaction not yet finalized")
 		}
+	}, backoff.WithContext(b, ctx))
+
+	if err != nil {
+		if finalErr != nil {
+			return finalErr
+		}
+		return &NetworkError{err: fmt.Errorf("timeout waiting for transaction %s to finalize", txHash), timeout: true}
 	}
+	return nil
 }
 
 // GetAccountDetails retrieves account details using the underlying RPC client.
