@@ -14,7 +14,7 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/rpcnetworkclient"
-	"github.com/stellar/friendbot/testutil"
+	"github.com/stellar/friendbot/internal/testutil"
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/strkey"
