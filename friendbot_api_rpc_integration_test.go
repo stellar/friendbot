@@ -20,15 +20,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This RPC instance must be configured with a working friendbot
-// endpoint as these tests depend on the RPC friendbot to setup
-// accounts for the friendbot in these tests to use.
-var rpcURL = os.Getenv("RPC_URL")
-
 // Setup creates running instance of friendbot from current code and requires an external instance of RPC that has been configured with its own separate instance of friendbot to support funding accounts. These tests utilize that to fund new minion and bot accounts on target network used by this local friendbot instance being tested.
 func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient) {
 	t.Helper()
 
+	var rpcURL = os.Getenv("RPC_URL")
 	if rpcURL == "" {
 		t.Skip("RPC_URL environment variable not set, skipping RPC integration tests")
 	}
