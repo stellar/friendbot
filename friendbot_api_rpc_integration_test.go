@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,16 +19,18 @@ import (
 )
 
 // Setup creates running instance of friendbot from current code and requires an external instance of RPC that has been configured with its own separate instance of friendbot to support funding accounts. These tests utilize that to fund new minion and bot accounts on target network used by this local friendbot instance being tested.
-func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient) {
+func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient, string) {
 	t.Helper()
 
-	var rpcURL = os.Getenv("RPC_URL")
+	rpcURL := os.Getenv("RPC_URL")
 	if rpcURL == "" {
 		t.Skip("RPC_URL environment variable not set, skipping RPC integration tests")
 	}
 
-	// Get network passphrase from RPC
-	networkPassphrase := getNetworkPassphraseFromRPC(t, rpcURL)
+	networkPassphrase := os.Getenv("NETWORK_PASSPHRASE")
+	if networkPassphrase == "" {
+		t.Skip("NETWORK_PASSPHRASE environment variable not set, skipping RPC integration tests")
+	}
 	startingBalance := "1000.00" // Use smaller amount so bot account keeps reserve
 	baseFee := int64(txnbuild.MinBaseFee)
 
@@ -71,51 +71,11 @@ func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient) {
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
-	return router, rpcClient
-}
-
-// getNetworkPassphraseFromRPC fetches the network passphrase from the RPC getNetwork method
-func getNetworkPassphraseFromRPC(t *testing.T, rpcURL string) string {
-	t.Helper()
-
-	payload := `{"jsonrpc": "2.0", "id": 8675309, "method": "getNetwork"}`
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, rpcURL, strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("RPC getNetwork returned status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var response struct {
-		Jsonrpc string `json:"jsonrpc"`
-		Id      int    `json:"id"`
-		Result  struct {
-			Passphrase string `json:"passphrase"`
-		} `json:"result"`
-	}
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return response.Result.Passphrase
+	return router, rpcClient, networkPassphrase
 }
 
 func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
-	router, rpcClient := setupRPCIntegration(t)
+	router, rpcClient, _ := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -151,7 +111,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
-	router, rpcClient := setupRPCIntegration(t)
+	router, rpcClient, _ := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -191,7 +151,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_MissingAddressParameter(t *testing.T) {
-	router, _ := setupRPCIntegration(t)
+	router, _, _ := setupRPCIntegration(t)
 
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
@@ -216,7 +176,7 @@ func TestFriendbotRPCIntegration_MissingAddressParameter(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_InvalidAddress(t *testing.T) {
-	router, _ := setupRPCIntegration(t)
+	router, _, _ := setupRPCIntegration(t)
 
 	invalidAddress := "invalid_address"
 
@@ -243,7 +203,7 @@ func TestFriendbotRPCIntegration_InvalidAddress(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
-	router, rpcClient := setupRPCIntegration(t)
+	router, rpcClient, _ := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -289,7 +249,7 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
-	router, rpcClient := setupRPCIntegration(t)
+	router, rpcClient, networkPassphrase := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -310,9 +270,6 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 	balance := accountDetails.Balance
 	expectedBalance := "1000.0000000"
 	assert.Equal(t, expectedBalance, balance)
-
-	// Get network passphrase for transaction building
-	networkPassphrase := getNetworkPassphraseFromRPC(t, rpcURL)
 
 	// Submit a bump sequence transaction to spend some XLM on fees
 	// This will lower the account balance slightly
@@ -376,7 +333,7 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_404NotFound(t *testing.T) {
-	router, _ := setupRPCIntegration(t)
+	router, _, _ := setupRPCIntegration(t)
 
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
 	w := httptest.NewRecorder()
