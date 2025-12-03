@@ -15,7 +15,11 @@ import (
 	"github.com/stellar/go/xdr"
 )
 
-const submitTransactionTimeout = 30 * time.Second
+const (
+	submitTransactionTimeout = 30 * time.Second
+	backoffInitialInterval   = 500 * time.Millisecond
+	backoffMaxInterval       = 3500 * time.Millisecond
+)
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
 type NetworkError struct {
@@ -115,8 +119,8 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	// Poll GetTransaction until the transaction is finalized
 	txHash := response.Hash
 	b := backoff.NewExponentialBackOff()
-	b.InitialInterval = 500 * time.Millisecond
-	b.MaxInterval = 3500 * time.Millisecond
+	b.InitialInterval = backoffInitialInterval
+	b.MaxInterval = backoffMaxInterval
 	b.MaxElapsedTime = submitTransactionTimeout
 
 	var finalErr error
