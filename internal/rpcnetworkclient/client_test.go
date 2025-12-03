@@ -289,7 +289,7 @@ func newMockRPCServer(t *testing.T, handler func(method string, params json.RawM
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		require.NoError(t, json.NewEncoder(w).Encode(resp))
 	}))
 }
 
