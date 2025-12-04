@@ -121,8 +121,12 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 		}
 	}
 
-	// Poll GetTransaction until the transaction is finalized
-	txHash := response.Hash
+	return r.pollTransactionStatus(ctx, response.Hash)
+}
+
+// pollTransactionStatus polls GetTransaction until the transaction is finalized
+// (SUCCESS or FAILED) or the context times out.
+func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string) error {
 	b := backoff.NewExponentialBackOff()
 	b.InitialInterval = backoffInitialInterval
 	b.MaxInterval = backoffMaxInterval
@@ -130,7 +134,7 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	// (submitTransactionTimeout) already handles the overall timeout.
 
 	var finalErr error
-	err = backoff.Retry(func() error {
+	err := backoff.Retry(func() error {
 		txResponse, err := r.client.GetTransaction(ctx, protocol.GetTransactionRequest{
 			Hash: txHash,
 		})
