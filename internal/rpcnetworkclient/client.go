@@ -99,7 +99,7 @@ func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 // SubmitTransaction submits a transaction using the underlying RPC client.
 // It blocks until the transaction is finalized (SUCCESS or FAILED) or times out after 30 seconds.
 func (r *NetworkClient) SubmitTransaction(txXDR string) error {
-	// TODO: Pass context down from the request upstream.
+	// TODO: Pass context down from the request upstream. See https://github.com/stellar/friendbot/issues/22
 	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
 	defer cancel()
 
