@@ -105,6 +105,13 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 	}
 }
 
+// TransactionResult contains the final transaction result returned to callers.
+type TransactionResult struct {
+	Successful  bool   `json:"successful"`
+	Hash        string `json:"hash"`
+	EnvelopeXdr string `json:"envelope_xdr"`
+}
+
 // SubmitTransaction should be passed to the Minion.
 func SubmitTransaction(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error) {
 	_, span := botTracer.Start(ctx, "minion.submit_transaction")
