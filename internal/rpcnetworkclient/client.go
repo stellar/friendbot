@@ -18,6 +18,7 @@ const (
 	submitTransactionTimeout = 30 * time.Second
 	backoffInitialInterval   = 500 * time.Millisecond
 	backoffMaxInterval       = 3500 * time.Millisecond
+	statusError              = "ERROR"
 )
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
@@ -98,6 +99,7 @@ func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 // SubmitTransaction submits a transaction using the underlying RPC client.
 // It blocks until the transaction is finalized (SUCCESS or FAILED) or times out after 30 seconds.
 func (r *NetworkClient) SubmitTransaction(txXDR string) error {
+	// TODO: Pass context down from the request upstream.
 	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
 	defer cancel()
 
@@ -111,7 +113,7 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	}
 
 	// If the transaction was rejected immediately, return the error
-	if response.Status == "ERROR" {
+	if response.Status == statusError {
 		return &NetworkError{
 			err:                 fmt.Errorf("transaction rejected"),
 			resultXDR:           response.ErrorResultXDR,
