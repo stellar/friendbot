@@ -126,7 +126,8 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	b := backoff.NewExponentialBackOff()
 	b.InitialInterval = backoffInitialInterval
 	b.MaxInterval = backoffMaxInterval
-	b.MaxElapsedTime = submitTransactionTimeout
+	// Note: MaxElapsedTime is not set here because the context timeout
+	// (submitTransactionTimeout) already handles the overall timeout.
 
 	var finalErr error
 	err = backoff.Retry(func() error {
