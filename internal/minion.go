@@ -134,7 +134,7 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 				errStr += ": network error string: " + resStr
 			}
 			// Record diagnostic events in span if available
-			if diagEvents := e.DiagnosticEventsXDR(); len(diagEvents) > 0 {
+			if diagEvents := e.DiagnosticEventStrings(); len(diagEvents) > 0 {
 				span.SetAttributes(
 					attribute.String("tx.result_xdr", resStr),
 					attribute.String("tx.diagnostic_events_xdr", strings.Join(diagEvents, ",")),

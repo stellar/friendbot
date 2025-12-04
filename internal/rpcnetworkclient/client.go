@@ -70,8 +70,8 @@ func (e *NetworkError) ResultString() (string, error) {
 	return e.resultXDR, nil
 }
 
-// DiagnosticEventsXDR returns the diagnostic events XDR strings, if available.
-func (e *NetworkError) DiagnosticEventsXDR() []string {
+// DiagnosticEventStrings returns the diagnostic event XDR strings, if available.
+func (e *NetworkError) DiagnosticEventStrings() []string {
 	return e.diagnosticEventsXDR
 }
 
