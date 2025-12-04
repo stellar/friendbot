@@ -150,7 +150,9 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 			}
 			return backoff.Permanent(finalErr)
 		default:
-			// Transaction not yet processed, retry with backoff
+			// Transaction not yet processed (including NOT_FOUND status).
+			// After sendTransaction returns a hash, the transaction should
+			// eventually appear, so we retry until context timeout.
 			return fmt.Errorf("transaction not yet finalized")
 		}
 	}, backoff.WithContext(b, ctx))
