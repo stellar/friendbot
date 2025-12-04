@@ -182,13 +182,13 @@ func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDe
 		return nil, &NetworkError{err: err}
 	}
 
-	accountKey, err := xdr.MarshalBase64(ledgerKey)
+	ledgerKeyXDR, err := xdr.MarshalBase64(ledgerKey)
 	if err != nil {
 		return nil, &NetworkError{err: err}
 	}
 
 	resp, err := r.client.GetLedgerEntries(context.Background(), protocol.GetLedgerEntriesRequest{
-		Keys: []string{accountKey},
+		Keys: []string{ledgerKeyXDR},
 	})
 	if err != nil {
 		return nil, &NetworkError{err: err}
