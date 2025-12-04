@@ -22,11 +22,11 @@ const (
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
 type NetworkError struct {
-	err                  error
-	notFound             bool
-	timeout              bool
-	resultXDR            string
-	diagnosticEventsXDR  []string
+	err                 error
+	notFound            bool
+	timeout             bool
+	resultXDR           string
+	diagnosticEventsXDR []string
 }
 
 // IsNotFound returns true if the error indicates the requested resource was not found.
