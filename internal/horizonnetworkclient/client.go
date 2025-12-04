@@ -38,6 +38,11 @@ func (e *NetworkError) ResultString() (string, error) {
 	return e.err.ResultString()
 }
 
+// DiagnosticEventsXDR returns nil as Horizon does not provide diagnostic events.
+func (e *NetworkError) DiagnosticEventsXDR() []string {
+	return nil
+}
+
 // Error implements the error interface.
 func (e *NetworkError) Error() string {
 	return e.err.Error()

@@ -3,7 +3,6 @@ package rpcnetworkclient
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -23,10 +22,11 @@ const (
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
 type NetworkError struct {
-	err       error
-	notFound  bool
-	timeout   bool
-	resultXDR string
+	err                  error
+	notFound             bool
+	timeout              bool
+	resultXDR            string
+	diagnosticEventsXDR  []string
 }
 
 // IsNotFound returns true if the error indicates the requested resource was not found.
@@ -69,6 +69,11 @@ func (e *NetworkError) ResultString() (string, error) {
 	return e.resultXDR, nil
 }
 
+// DiagnosticEventsXDR returns the diagnostic events XDR strings, if available.
+func (e *NetworkError) DiagnosticEventsXDR() []string {
+	return e.diagnosticEventsXDR
+}
+
 // Error implements the error interface.
 func (e *NetworkError) Error() string {
 	return e.err.Error()
@@ -107,13 +112,11 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 
 	// If the transaction was rejected immediately, return the error
 	if response.Status == "ERROR" {
-		if len(response.DiagnosticEventsXDR) > 0 {
-			log.Printf("transaction rejected with %d diagnostic events:", len(response.DiagnosticEventsXDR))
-			for i, eventXDR := range response.DiagnosticEventsXDR {
-				log.Printf("  event %d: %s", i, eventXDR)
-			}
+		return &NetworkError{
+			err:                 fmt.Errorf("transaction rejected"),
+			resultXDR:           response.ErrorResultXDR,
+			diagnosticEventsXDR: response.DiagnosticEventsXDR,
 		}
-		return &NetworkError{err: fmt.Errorf("transaction rejected"), resultXDR: response.ErrorResultXDR}
 	}
 
 	// Poll GetTransaction until the transaction is finalized
@@ -137,7 +140,11 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 		case protocol.TransactionStatusSuccess:
 			return nil
 		case protocol.TransactionStatusFailed:
-			finalErr = &NetworkError{err: fmt.Errorf("transaction failed"), resultXDR: txResponse.ResultXDR}
+			finalErr = &NetworkError{
+				err:                 fmt.Errorf("transaction failed"),
+				resultXDR:           txResponse.ResultXDR,
+				diagnosticEventsXDR: txResponse.DiagnosticEventsXDR,
+			}
 			return backoff.Permanent(finalErr)
 		default:
 			// Transaction not yet processed, retry with backoff
