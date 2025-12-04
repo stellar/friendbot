@@ -172,10 +172,6 @@ func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string
 
 // GetAccountDetails retrieves account details using the underlying RPC client.
 func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
-	// We need to get the raw account entry to access balance information
-	// Since LoadAccount doesn't expose the balance, we'll implement it manually
-	// similar to how LoadAccount works internally
-
 	accountIDObj, err := xdr.AddressToAccountId(accountID)
 	if err != nil {
 		return nil, &NetworkError{err: err}
