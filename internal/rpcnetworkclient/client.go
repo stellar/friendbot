@@ -205,6 +205,9 @@ func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDe
 	if err := xdr.SafeUnmarshalBase64(resp.Entries[0].DataXDR, &entry); err != nil {
 		return nil, &NetworkError{err: err}
 	}
+	if entry.Type != xdr.LedgerEntryTypeAccount {
+		return nil, &NetworkError{err: fmt.Errorf("unexpected ledger entry type: expected account, got %v", entry.Type)}
+	}
 
 	// Convert balance from stroops (int64) to XLM string format
 	balance := amount.StringFromInt64(int64(entry.Account.Balance))
