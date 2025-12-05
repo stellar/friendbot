@@ -11,6 +11,8 @@ type NetworkError interface {
 	IsTimeout() bool
 	// ResultString returns the result string from the error, if available.
 	ResultString() (string, error)
+	// DiagnosticEventStrings returns the diagnostic event XDR strings from the error, if available.
+	DiagnosticEventStrings() []string
 }
 
 // NetworkClient defines a general interface for interacting with Stellar network services.

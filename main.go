@@ -30,7 +30,8 @@ type Config struct {
 	Port                   int         `toml:"port" valid:"required"`
 	FriendbotSecret        string      `toml:"friendbot_secret" valid:"required"`
 	NetworkPassphrase      string      `toml:"network_passphrase" valid:"required"`
-	HorizonURL             string      `toml:"horizon_url" valid:"required"`
+	HorizonURL             string      `toml:"horizon_url" valid:"optional"`
+	RPCURL                 string      `toml:"rpc_url" valid:"optional"`
 	StartingBalance        string      `toml:"starting_balance" valid:"required"`
 	TLS                    *config.TLS `valid:"optional"`
 	NumMinions             int         `toml:"num_minions" valid:"optional"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/keypair"
@@ -131,6 +132,13 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 				return nil, errors.Wrap(ErrAccountExists, errStr)
 			} else {
 				errStr += ": network error string: " + resStr
+			}
+			// Record diagnostic events in span if available
+			if diagEvents := e.DiagnosticEventStrings(); len(diagEvents) > 0 {
+				span.SetAttributes(
+					attribute.String("tx.result_xdr", resStr),
+					attribute.String("tx.diagnostic_events_xdr", strings.Join(diagEvents, ",")),
+				)
 			}
 			span.SetStatus(codes.Error, errStr)
 			span.AddEvent("transaction submission failed")
