@@ -70,12 +70,11 @@ func newNetworkClient(cfg Config) (internal.NetworkClient, error) {
 	if cfg.RPCURL != "" {
 		return rpcnetworkclient.NewNetworkClient(cfg.RPCURL, http.DefaultClient), nil
 	}
-	hclient := &horizonclient.Client{
+	return horizonnetworkclient.NewNetworkClient(&horizonclient.Client{
 		HorizonURL: cfg.HorizonURL,
 		HTTP:       http.DefaultClient,
 		AppName:    "friendbot",
-	}
-	return horizonnetworkclient.NewNetworkClient(hclient), nil
+	}), nil
 }
 
 func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full, networkPassphrase, newAccountBalance, minionBalance string,
