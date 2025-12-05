@@ -61,20 +61,20 @@ func initFriendbot(cfg Config) (*internal.Bot, error) {
 }
 
 func newNetworkClient(cfg Config) (internal.NetworkClient, error) {
-	if cfg.HorizonURL == "" && cfg.RPCURL == "" {
-		return nil, errors.New("either horizon_url or rpc_url must be provided")
-	}
 	if cfg.HorizonURL != "" && cfg.RPCURL != "" {
 		return nil, errors.New("only one of horizon_url or rpc_url should be provided, not both")
 	}
 	if cfg.RPCURL != "" {
 		return rpcnetworkclient.NewNetworkClient(cfg.RPCURL, http.DefaultClient), nil
 	}
-	return horizonnetworkclient.NewNetworkClient(&horizonclient.Client{
-		HorizonURL: cfg.HorizonURL,
-		HTTP:       http.DefaultClient,
-		AppName:    "friendbot",
-	}), nil
+	if cfg.HorizonURL == "" {
+		return horizonnetworkclient.NewNetworkClient(&horizonclient.Client{
+			HorizonURL: cfg.HorizonURL,
+			HTTP:       http.DefaultClient,
+			AppName:    "friendbot",
+		}), nil
+	}
+	return nil, errors.New("either horizon_url or rpc_url must be provided")
 }
 
 func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full, networkPassphrase, newAccountBalance, minionBalance string,
