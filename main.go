@@ -30,7 +30,8 @@ type Config struct {
 	Port                   int         `toml:"port" valid:"required"`
 	FriendbotSecret        string      `toml:"friendbot_secret" valid:"required"`
 	NetworkPassphrase      string      `toml:"network_passphrase" valid:"required"`
-	HorizonURL             string      `toml:"horizon_url" valid:"required"`
+	HorizonURL             string      `toml:"horizon_url" valid:"optional"`
+	RPCURL                 string      `toml:"rpc_url" valid:"optional"`
 	StartingBalance        string      `toml:"starting_balance" valid:"required"`
 	TLS                    *config.TLS `valid:"optional"`
 	NumMinions             int         `toml:"num_minions" valid:"optional"`
@@ -80,7 +81,7 @@ func run(cmd *cobra.Command, args []string) {
 	log.Infof("Tracer initialized")
 	defer tracer()
 
-	fb, err := initFriendbot(cfg.FriendbotSecret, cfg.NetworkPassphrase, cfg.HorizonURL, cfg.StartingBalance,
+	fb, err := initFriendbot(cfg.FriendbotSecret, cfg.NetworkPassphrase, cfg.HorizonURL, cfg.RPCURL, cfg.StartingBalance,
 		cfg.NumMinions, cfg.BaseFee, cfg.MinionBatchSize, cfg.SubmitTxRetriesAllowed)
 	if err != nil {
 		log.Error(err)
