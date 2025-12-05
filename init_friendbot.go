@@ -14,31 +14,22 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-func initFriendbot(
-	friendbotSecret string,
-	networkPassphrase string,
-	horizonURL string,
-	startingBalance string,
-	numMinions int,
-	baseFee int64,
-	minionBatchSize int,
-	submitTxRetriesAllowed int,
-) (*internal.Bot, error) {
-	if friendbotSecret == "" || networkPassphrase == "" || horizonURL == "" || startingBalance == "" || numMinions < 0 {
+func initFriendbot(cfg Config) (*internal.Bot, error) {
+	if cfg.FriendbotSecret == "" || cfg.NetworkPassphrase == "" || cfg.HorizonURL == "" || cfg.StartingBalance == "" || cfg.NumMinions < 0 {
 		return nil, errors.New("invalid input param(s)")
 	}
 
 	// Guarantee that friendbotSecret is a seed, if not blank.
-	strkey.MustDecode(strkey.VersionByteSeed, friendbotSecret)
+	strkey.MustDecode(strkey.VersionByteSeed, cfg.FriendbotSecret)
 
 	hclient := &horizonclient.Client{
-		HorizonURL: horizonURL,
+		HorizonURL: cfg.HorizonURL,
 		HTTP:       http.DefaultClient,
 		AppName:    "friendbot",
 	}
 	networkClient := horizonnetworkclient.NewNetworkClient(hclient)
 
-	botKP, err := keypair.Parse(friendbotSecret)
+	botKP, err := keypair.Parse(cfg.FriendbotSecret)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing bot keypair")
 	}
@@ -49,17 +40,20 @@ func initFriendbot(
 	botAccount := internal.Account{AccountID: botKeypair.Address()}
 	// set default values
 	minionBalance := "101.00"
+	numMinions := cfg.NumMinions
 	if numMinions == 0 {
 		numMinions = 1000
 	}
+	minionBatchSize := cfg.MinionBatchSize
 	if minionBatchSize == 0 {
 		minionBatchSize = 50
 	}
+	submitTxRetriesAllowed := cfg.SubmitTxRetriesAllowed
 	if submitTxRetriesAllowed == 0 {
 		submitTxRetriesAllowed = 5
 	}
 	log.Printf("Found all valid params, now creating %d minions", numMinions)
-	minions, err := createMinionAccounts(botAccount, botKeypair, networkPassphrase, startingBalance, minionBalance, numMinions, minionBatchSize, submitTxRetriesAllowed, baseFee, networkClient)
+	minions, err := createMinionAccounts(botAccount, botKeypair, cfg.NetworkPassphrase, cfg.StartingBalance, minionBalance, numMinions, minionBatchSize, submitTxRetriesAllowed, cfg.BaseFee, networkClient)
 	if err != nil && len(minions) == 0 {
 		return nil, errors.Wrap(err, "creating minion accounts")
 	}
