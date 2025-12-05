@@ -15,43 +15,20 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-func initFriendbot(
-	friendbotSecret string,
-	networkPassphrase string,
-	horizonURL string,
-	rpcURL string,
-	startingBalance string,
-	numMinions int,
-	baseFee int64,
-	minionBatchSize int,
-	submitTxRetriesAllowed int,
-) (*internal.Bot, error) {
-	if friendbotSecret == "" || networkPassphrase == "" || startingBalance == "" || numMinions < 0 {
+func initFriendbot(cfg Config) (*internal.Bot, error) {
+	if cfg.FriendbotSecret == "" || cfg.NetworkPassphrase == "" || cfg.StartingBalance == "" || cfg.NumMinions < 0 {
 		return nil, errors.New("invalid input param(s)")
-	}
-	if horizonURL == "" && rpcURL == "" {
-		return nil, errors.New("either horizon_url or rpc_url must be provided")
-	}
-	if horizonURL != "" && rpcURL != "" {
-		return nil, errors.New("only one of horizon_url or rpc_url should be provided, not both")
 	}
 
 	// Guarantee that friendbotSecret is a seed, if not blank.
-	strkey.MustDecode(strkey.VersionByteSeed, friendbotSecret)
+	strkey.MustDecode(strkey.VersionByteSeed, cfg.FriendbotSecret)
 
-	var networkClient internal.NetworkClient
-	if rpcURL != "" {
-		networkClient = rpcnetworkclient.NewNetworkClient(rpcURL, http.DefaultClient)
-	} else {
-		hclient := &horizonclient.Client{
-			HorizonURL: horizonURL,
-			HTTP:       http.DefaultClient,
-			AppName:    "friendbot",
-		}
-		networkClient = horizonnetworkclient.NewNetworkClient(hclient)
+	networkClient, err := newNetworkClient(cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	botKP, err := keypair.Parse(friendbotSecret)
+	botKP, err := keypair.Parse(cfg.FriendbotSecret)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing bot keypair")
 	}
@@ -62,22 +39,42 @@ func initFriendbot(
 	botAccount := internal.Account{AccountID: botKeypair.Address()}
 	// set default values
 	minionBalance := "101.00"
+	numMinions := cfg.NumMinions
 	if numMinions == 0 {
 		numMinions = 1000
 	}
+	minionBatchSize := cfg.MinionBatchSize
 	if minionBatchSize == 0 {
 		minionBatchSize = 50
 	}
+	submitTxRetriesAllowed := cfg.SubmitTxRetriesAllowed
 	if submitTxRetriesAllowed == 0 {
 		submitTxRetriesAllowed = 5
 	}
 	log.Printf("Found all valid params, now creating %d minions", numMinions)
-	minions, err := createMinionAccounts(botAccount, botKeypair, networkPassphrase, startingBalance, minionBalance, numMinions, minionBatchSize, submitTxRetriesAllowed, baseFee, networkClient)
+	minions, err := createMinionAccounts(botAccount, botKeypair, cfg.NetworkPassphrase, cfg.StartingBalance, minionBalance, numMinions, minionBatchSize, submitTxRetriesAllowed, cfg.BaseFee, networkClient)
 	if err != nil && len(minions) == 0 {
 		return nil, errors.Wrap(err, "creating minion accounts")
 	}
 	log.Printf("Adding %d minions to friendbot", len(minions))
 	return &internal.Bot{Minions: minions}, nil
+}
+
+func newNetworkClient(cfg Config) (internal.NetworkClient, error) {
+	if cfg.HorizonURL != "" && cfg.RPCURL != "" {
+		return nil, errors.New("only one of horizon_url or rpc_url should be provided, not both")
+	}
+	if cfg.RPCURL != "" {
+		return rpcnetworkclient.NewNetworkClient(cfg.RPCURL, http.DefaultClient), nil
+	}
+	if cfg.HorizonURL == "" {
+		return horizonnetworkclient.NewNetworkClient(&horizonclient.Client{
+			HorizonURL: cfg.HorizonURL,
+			HTTP:       http.DefaultClient,
+			AppName:    "friendbot",
+		}), nil
+	}
+	return nil, errors.New("either horizon_url or rpc_url must be provided")
 }
 
 func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full, networkPassphrase, newAccountBalance, minionBalance string,
