@@ -53,10 +53,16 @@ func (e *NetworkError) Unwrap() error {
 	return e.err
 }
 
+// Ensure NetworkError implements the internal.NetworkError interface.
+var _ internal.NetworkError = (*NetworkError)(nil)
+
 // NetworkClient wraps a horizon client and implements the internal.NetworkClient interface.
 type NetworkClient struct {
 	client horizonclient.ClientInterface
 }
+
+// Ensure NetworkClient implements the internal.NetworkClient interface.
+var _ internal.NetworkClient = (*NetworkClient)(nil)
 
 // NewNetworkClient creates a new NetworkClient wrapping the given horizon client.
 func NewNetworkClient(client horizonclient.ClientInterface) *NetworkClient {

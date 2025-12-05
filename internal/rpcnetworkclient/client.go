@@ -85,6 +85,9 @@ func (e *NetworkError) Unwrap() error {
 	return e.err
 }
 
+// Ensure NetworkError implements the internal.NetworkError interface.
+var _ internal.NetworkError = (*NetworkError)(nil)
+
 // NetworkClient wraps an RPC client and implements the internal.NetworkClient interface.
 type NetworkClient struct {
 	client *rpcclient.Client
