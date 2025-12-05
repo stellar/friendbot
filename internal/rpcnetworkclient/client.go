@@ -90,6 +90,9 @@ type NetworkClient struct {
 	client *rpcclient.Client
 }
 
+// Ensure NetworkClient implements the internal.NetworkClient interface.
+var _ internal.NetworkClient = (*NetworkClient)(nil)
+
 // NewNetworkClient creates a new NetworkClient wrapping the given RPC client.
 func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 	client := rpcclient.NewClient(url, httpClient)
