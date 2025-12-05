@@ -2,6 +2,7 @@ package rpcnetworkclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -139,26 +140,23 @@ func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string
 	// Note: MaxElapsedTime is not set here because the context timeout
 	// (submitTransactionTimeout) already handles the overall timeout.
 
-	var finalErr error
 	err := backoff.Retry(func() error {
 		txResponse, err := r.client.GetTransaction(ctx, protocol.GetTransactionRequest{
 			Hash: txHash,
 		})
 		if err != nil {
-			finalErr = &NetworkError{err: err}
-			return backoff.Permanent(finalErr)
+			return backoff.Permanent(&NetworkError{err: err})
 		}
 
 		switch txResponse.Status {
 		case protocol.TransactionStatusSuccess:
 			return nil
 		case protocol.TransactionStatusFailed:
-			finalErr = &NetworkError{
+			return backoff.Permanent(&NetworkError{
 				err:                 fmt.Errorf("transaction failed"),
 				resultXDR:           txResponse.ResultXDR,
 				diagnosticEventsXDR: txResponse.DiagnosticEventsXDR,
-			}
-			return backoff.Permanent(finalErr)
+			})
 		default:
 			// Transaction not yet processed (including NOT_FOUND status).
 			// After sendTransaction returns a hash, the transaction should
@@ -168,10 +166,20 @@ func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string
 	}, backoff.WithContext(b, ctx))
 
 	if err != nil {
-		if finalErr != nil {
-			return finalErr
+		// Check if it's already a NetworkError (from Permanent)
+		var netErr *NetworkError
+		if errors.As(err, &netErr) {
+			return netErr
 		}
-		return &NetworkError{err: fmt.Errorf("timeout waiting for transaction %s to finalize", txHash), timeout: true}
+		// Context timeout/cancellation
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return &NetworkError{
+				err:     fmt.Errorf("timeout waiting for transaction %s to finalize", txHash),
+				timeout: true,
+			}
+		}
+		// Unexpected error
+		return &NetworkError{err: err}
 	}
 	return nil
 }
