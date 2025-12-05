@@ -19,26 +19,13 @@ func initFriendbot(cfg Config) (*internal.Bot, error) {
 	if cfg.FriendbotSecret == "" || cfg.NetworkPassphrase == "" || cfg.StartingBalance == "" || cfg.NumMinions < 0 {
 		return nil, errors.New("invalid input param(s)")
 	}
-	if cfg.HorizonURL == "" && cfg.RPCURL == "" {
-		return nil, errors.New("either horizon_url or rpc_url must be provided")
-	}
-	if cfg.HorizonURL != "" && cfg.RPCURL != "" {
-		return nil, errors.New("only one of horizon_url or rpc_url should be provided, not both")
-	}
 
 	// Guarantee that friendbotSecret is a seed, if not blank.
 	strkey.MustDecode(strkey.VersionByteSeed, cfg.FriendbotSecret)
 
-	var networkClient internal.NetworkClient
-	if cfg.RPCURL != "" {
-		networkClient = rpcnetworkclient.NewNetworkClient(cfg.RPCURL, http.DefaultClient)
-	} else {
-		hclient := &horizonclient.Client{
-			HorizonURL: cfg.HorizonURL,
-			HTTP:       http.DefaultClient,
-			AppName:    "friendbot",
-		}
-		networkClient = horizonnetworkclient.NewNetworkClient(hclient)
+	networkClient, err := newNetworkClient(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	botKP, err := keypair.Parse(cfg.FriendbotSecret)
@@ -71,6 +58,24 @@ func initFriendbot(cfg Config) (*internal.Bot, error) {
 	}
 	log.Printf("Adding %d minions to friendbot", len(minions))
 	return &internal.Bot{Minions: minions}, nil
+}
+
+func newNetworkClient(cfg Config) (internal.NetworkClient, error) {
+	if cfg.HorizonURL == "" && cfg.RPCURL == "" {
+		return nil, errors.New("either horizon_url or rpc_url must be provided")
+	}
+	if cfg.HorizonURL != "" && cfg.RPCURL != "" {
+		return nil, errors.New("only one of horizon_url or rpc_url should be provided, not both")
+	}
+	if cfg.RPCURL != "" {
+		return rpcnetworkclient.NewNetworkClient(cfg.RPCURL, http.DefaultClient), nil
+	}
+	hclient := &horizonclient.Client{
+		HorizonURL: cfg.HorizonURL,
+		HTTP:       http.DefaultClient,
+		AppName:    "friendbot",
+	}
+	return horizonnetworkclient.NewNetworkClient(hclient), nil
 }
 
 func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full, networkPassphrase, newAccountBalance, minionBalance string,
