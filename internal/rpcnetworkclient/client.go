@@ -2,10 +2,12 @@ package rpcnetworkclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/amount"
 	rpcclient "github.com/stellar/go/clients/rpcclient"
@@ -13,14 +15,20 @@ import (
 	"github.com/stellar/go/xdr"
 )
 
-const submitTransactionTimeout = 30 * time.Second
+const (
+	submitTransactionTimeout = 30 * time.Second
+	backoffInitialInterval   = 500 * time.Millisecond
+	backoffMaxInterval       = 3500 * time.Millisecond
+	statusError              = "ERROR"
+)
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
 type NetworkError struct {
-	err       error
-	notFound  bool
-	timeout   bool
-	resultXDR string
+	err                 error
+	notFound            bool
+	timeout             bool
+	resultXDR           string
+	diagnosticEventsXDR []string
 }
 
 // IsNotFound returns true if the error indicates the requested resource was not found.
@@ -63,6 +71,11 @@ func (e *NetworkError) ResultString() (string, error) {
 	return e.resultXDR, nil
 }
 
+// DiagnosticEventStrings returns the diagnostic event XDR strings, if available.
+func (e *NetworkError) DiagnosticEventStrings() []string {
+	return e.diagnosticEventsXDR
+}
+
 // Error implements the error interface.
 func (e *NetworkError) Error() string {
 	return e.err.Error()
@@ -73,10 +86,16 @@ func (e *NetworkError) Unwrap() error {
 	return e.err
 }
 
+// Ensure NetworkError implements the internal.NetworkError interface.
+var _ internal.NetworkError = (*NetworkError)(nil)
+
 // NetworkClient wraps an RPC client and implements the internal.NetworkClient interface.
 type NetworkClient struct {
 	client *rpcclient.Client
 }
+
+// Ensure NetworkClient implements the internal.NetworkClient interface.
+var _ internal.NetworkClient = (*NetworkClient)(nil)
 
 // NewNetworkClient creates a new NetworkClient wrapping the given RPC client.
 func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
@@ -87,6 +106,7 @@ func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 // SubmitTransaction submits a transaction using the underlying RPC client.
 // It blocks until the transaction is finalized (SUCCESS or FAILED) or times out after 30 seconds.
 func (r *NetworkClient) SubmitTransaction(txXDR string) error {
+	// TODO: Pass context down from the request upstream. See https://github.com/stellar/friendbot/issues/22
 	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
 	defer cancel()
 
@@ -100,41 +120,68 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 	}
 
 	// If the transaction was rejected immediately, return the error
-	if response.Status == "ERROR" {
-		return &NetworkError{err: fmt.Errorf("transaction rejected"), resultXDR: response.ErrorResultXDR}
+	if response.Status == statusError {
+		return &NetworkError{
+			err:                 fmt.Errorf("transaction rejected"),
+			resultXDR:           response.ErrorResultXDR,
+			diagnosticEventsXDR: response.DiagnosticEventsXDR,
+		}
 	}
 
-	// Poll GetTransaction until the transaction is finalized
-	txHash := response.Hash
-	for {
-		select {
-		case <-ctx.Done():
-			return &NetworkError{err: fmt.Errorf("timeout waiting for transaction %s to finalize", txHash), timeout: true}
-		default:
-		}
+	return r.pollTransactionStatus(ctx, response.Hash)
+}
 
+// pollTransactionStatus polls GetTransaction until the transaction is finalized
+// (SUCCESS or FAILED) or the context times out.
+func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string) error {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = backoffInitialInterval
+	b.MaxInterval = backoffMaxInterval
+	// Note: MaxElapsedTime is not set here because the context timeout
+	// (submitTransactionTimeout) already handles the overall timeout.
+
+	err := backoff.Retry(func() error {
 		txResponse, err := r.client.GetTransaction(ctx, protocol.GetTransactionRequest{
 			Hash: txHash,
 		})
 		if err != nil {
-			return &NetworkError{err: err}
+			return backoff.Permanent(&NetworkError{err: err})
 		}
 
 		switch txResponse.Status {
 		case protocol.TransactionStatusSuccess:
 			return nil
 		case protocol.TransactionStatusFailed:
-			return &NetworkError{err: fmt.Errorf("transaction failed"), resultXDR: txResponse.ResultXDR}
-		case protocol.TransactionStatusNotFound:
-			// Transaction not yet processed, wait and retry
-			time.Sleep(1 * time.Second)
-			continue
+			return backoff.Permanent(&NetworkError{
+				err:                 fmt.Errorf("transaction failed"),
+				resultXDR:           txResponse.ResultXDR,
+				diagnosticEventsXDR: txResponse.DiagnosticEventsXDR,
+			})
 		default:
-			// Unknown status, wait and retry
-			time.Sleep(1 * time.Second)
-			continue
+			// Transaction not yet processed (including NOT_FOUND status).
+			// After sendTransaction returns a hash, the transaction should
+			// eventually appear, so we retry until context timeout.
+			return fmt.Errorf("transaction not yet finalized")
 		}
+	}, backoff.WithContext(b, ctx))
+
+	if err != nil {
+		// Check if it's already a NetworkError (from Permanent)
+		var netErr *NetworkError
+		if errors.As(err, &netErr) {
+			return netErr
+		}
+		// Context timeout/cancellation
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return &NetworkError{
+				err:     fmt.Errorf("timeout waiting for transaction %s to finalize", txHash),
+				timeout: true,
+			}
+		}
+		// Unexpected error
+		return &NetworkError{err: err}
 	}
+	return nil
 }
 
 // SimulateTransaction simulates a transaction using the underlying RPC client.
@@ -178,10 +225,6 @@ func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTra
 
 // GetAccountDetails retrieves account details using the underlying RPC client.
 func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
-	// We need to get the raw account entry to access balance information
-	// Since LoadAccount doesn't expose the balance, we'll implement it manually
-	// similar to how LoadAccount works internally
-
 	accountIDObj, err := xdr.AddressToAccountId(accountID)
 	if err != nil {
 		return nil, &NetworkError{err: err}
@@ -192,13 +235,13 @@ func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDe
 		return nil, &NetworkError{err: err}
 	}
 
-	accountKey, err := xdr.MarshalBase64(ledgerKey)
+	ledgerKeyXDR, err := xdr.MarshalBase64(ledgerKey)
 	if err != nil {
 		return nil, &NetworkError{err: err}
 	}
 
 	resp, err := r.client.GetLedgerEntries(context.Background(), protocol.GetLedgerEntriesRequest{
-		Keys: []string{accountKey},
+		Keys: []string{ledgerKeyXDR},
 	})
 	if err != nil {
 		return nil, &NetworkError{err: err}
@@ -214,6 +257,9 @@ func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDe
 	var entry xdr.LedgerEntryData
 	if err := xdr.SafeUnmarshalBase64(resp.Entries[0].DataXDR, &entry); err != nil {
 		return nil, &NetworkError{err: err}
+	}
+	if entry.Type != xdr.LedgerEntryTypeAccount {
+		return nil, &NetworkError{err: fmt.Errorf("unexpected ledger entry type: expected account, got %v", entry.Type)}
 	}
 
 	// Convert balance from stroops (int64) to XLM string format

@@ -11,6 +11,8 @@ type NetworkError interface {
 	IsTimeout() bool
 	// ResultString returns the result string from the error, if available.
 	ResultString() (string, error)
+	// DiagnosticEventStrings returns the diagnostic event XDR strings from the error, if available.
+	DiagnosticEventStrings() []string
 }
 
 // SimulateTransactionResult contains the result of simulating a transaction.
