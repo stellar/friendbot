@@ -133,12 +133,16 @@ The service uses a TOML configuration file. Here are the key settings:
 | `port` | Port to listen on | `8000` |
 | `friendbot_secret` | Secret key for the friendbot account | Required |
 | `network_passphrase` | Stellar network passphrase | `"Test SDF Network ; September 2015"` |
-| `horizon_url` | Horizon server URL | `"https://horizon-testnet.stellar.org"` |
+| `horizon_url` | Horizon server URL (use either this or `rpc_url`, not both) | `"https://horizon-testnet.stellar.org"` |
+| `rpc_url` | Stellar RPC server URL (use either this or `horizon_url`, not both) | None |
 | `starting_balance` | Initial native balance for new accounts | `"10000.00"` |
 | `num_minions` | Number of minion accounts for parallel processing | `1000` |
 | `base_fee` | Base fee for transactions | `100000` |
 | `minion_batch_size` | Batch size for minion operations | `50` |
 | `submit_tx_retries_allowed` | Number of retry attempts for failed transactions | `5` |
+
+> [!NOTE]
+> You must configure either `horizon_url` or `rpc_url`, but not both. Friendbot can interact with the Stellar network through either Horizon (the traditional REST API) or RPC (the newer JSON-RPC API).
 
 
 ## Development
