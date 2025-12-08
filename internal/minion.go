@@ -65,8 +65,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 	// Contracts can always receive XLM via the native SAC transfer.
 	var exists bool
 	var balance string
-	_, isContractErr := strkey.Decode(strkey.VersionByteContract, destAddress)
-	if isContractErr == nil {
+	if strkey.IsValidContractAddress(destAddress) {
 		span.AddEvent("Destination is a contract address")
 		span.SetAttributes(attribute.String("destination.contract_address", destAddress))
 	} else {
@@ -230,8 +229,7 @@ func (minion *Minion) checkBalance(balance string) error {
 
 func (minion *Minion) makeTx(destAddress string, exists bool) ([32]byte, string, error) {
 	// Check if the destination is a contract address (C address)
-	_, isContractErr := strkey.Decode(strkey.VersionByteContract, destAddress)
-	if isContractErr == nil {
+	if strkey.IsValidContractAddress(destAddress) {
 		return minion.makeContractPaymentTx(destAddress)
 	}
 
