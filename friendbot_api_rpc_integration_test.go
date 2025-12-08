@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -46,8 +44,10 @@ func setupRPCIntegration(t *testing.T) *rpcIntegrationSetup {
 		t.Skip("RPC_URL environment variable not set, skipping RPC integration tests")
 	}
 
-	// Get network passphrase from RPC
-	networkPassphrase := getNetworkPassphraseFromRPC(t, rpcURL)
+	networkPassphrase := os.Getenv("NETWORK_PASSPHRASE")
+	if networkPassphrase == "" {
+		t.Skip("NETWORK_PASSPHRASE environment variable not set, skipping RPC integration tests")
+	}
 	startingBalance := "1000.00" // Use smaller amount so bot account keeps reserve
 	baseFee := int64(txnbuild.MinBaseFee)
 
@@ -193,46 +193,6 @@ func getContractBalance(t *testing.T, setup *rpcIntegrationSetup, contractAddres
 	require.LessOrEqual(t, i128.Lo, uint64(math.MaxInt64), "balance overflows int64")
 
 	return int64(i128.Lo) //nolint:gosec // overflow checked above
-}
-
-// getNetworkPassphraseFromRPC fetches the network passphrase from the RPC getNetwork method
-func getNetworkPassphraseFromRPC(t *testing.T, rpcURL string) string {
-	t.Helper()
-
-	payload := `{"jsonrpc": "2.0", "id": 8675309, "method": "getNetwork"}`
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, rpcURL, strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("RPC getNetwork returned status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var response struct {
-		Jsonrpc string `json:"jsonrpc"`
-		Id      int    `json:"id"`
-		Result  struct {
-			Passphrase string `json:"passphrase"`
-		} `json:"result"`
-	}
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return response.Result.Passphrase
 }
 
 func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {

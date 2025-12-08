@@ -22,8 +22,6 @@ var ErrAccountExists error = errors.New(fmt.Sprintf("createAccountAlreadyExist (
 
 var ErrAccountFunded error = errors.New("account already funded to starting balance")
 
-var ErrContractFundingRequiresRPC error = errors.New("funding contracts (C addresses) requires RPC support with transaction simulation")
-
 var botTracer = otel.Tracer("stellar_friendbot_minion")
 
 // Minion contains a Stellar channel account and Go channels to communicate with friendbot.
@@ -119,6 +117,13 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 		span.SetAttributes(attribute.Bool("minion.tx_success_status", succ.Successful))
 		span.SetStatus(codes.Ok, codes.Ok.String())
 	}
+}
+
+// TransactionResult contains the final transaction result returned to callers.
+type TransactionResult struct {
+	Successful  bool   `json:"successful"`
+	Hash        string `json:"hash"`
+	EnvelopeXdr string `json:"envelope_xdr"`
 }
 
 // SubmitTransaction should be passed to the Minion.

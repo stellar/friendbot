@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stellar/friendbot/internal"
+	"github.com/stellar/friendbot/internal/horizonnetworkclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/txnbuild"
 	"github.com/stretchr/testify/assert"
@@ -304,9 +305,9 @@ func TestFriendbotAPI_ValidContractAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a mock network client that returns an error for simulation
-	// (this simulates the case where RPC simulation is not available)
+	// (this simulates the case where Horizon is used instead of RPC)
 	mockNetworkClient := &mockNetworkClientWithSimulation{
-		simulateErr: internal.ErrContractFundingRequiresRPC,
+		simulateErr: horizonnetworkclient.ErrSimulationNotSupported,
 	}
 
 	minion := internal.Minion{
