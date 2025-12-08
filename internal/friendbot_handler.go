@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -96,26 +97,12 @@ func (handler *FriendbotHandler) loadAddress(ctx context.Context, r *http.Reques
 	}
 
 	// Accept both G addresses (accounts) and C addresses (contracts)
-	err = ValidateAddress(unescaped)
+	if !strkey.IsValidEd25519PublicKey(unescaped) && !strkey.IsValidContractAddress(unescaped) {
+		err = errors.New("invalid address: must be a valid G or C address")
+		span.SetStatus(codes.Error, err.Error())
+		return unescaped, err
+	}
 	span.SetAttributes(attribute.String("destination.account", address))
 	span.SetStatus(codes.Ok, codes.Ok.String())
-	return unescaped, err
-}
-
-// ValidateAddress validates that the address is either a valid account ID (G address)
-// or a valid contract ID (C address).
-func ValidateAddress(address string) error {
-	// Try to decode as account ID (G address)
-	_, err := strkey.Decode(strkey.VersionByteAccountID, address)
-	if err == nil {
-		return nil
-	}
-
-	// Try to decode as contract ID (C address)
-	_, err = strkey.Decode(strkey.VersionByteContract, address)
-	if err == nil {
-		return nil
-	}
-
-	return err
+	return unescaped, nil
 }

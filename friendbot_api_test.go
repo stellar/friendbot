@@ -139,7 +139,7 @@ func TestFriendbotAPI_MissingAddressParameter(t *testing.T) {
           "detail": "The request you sent was invalid in some way.",
           "extras": {
             "invalid_field": "addr",
-            "reason": "strkey is 0 bytes long; minimum valid length is 5"
+            "reason": "invalid address: must be a valid G or C address"
           }
         }`
 	assert.JSONEq(t, expectedJSON, body)
@@ -166,7 +166,7 @@ func TestFriendbotAPI_InvalidAddress(t *testing.T) {
           "detail": "The request you sent was invalid in some way.",
           "extras": {
             "invalid_field": "addr",
-            "reason": "base32 decode failed: illegal base32 data at input byte 15"
+            "reason": "invalid address: must be a valid G or C address"
           }
         }`
 	assert.JSONEq(t, expectedJSON, body)
@@ -392,27 +392,6 @@ func (m *mockNetworkClientWithSimulation) SimulateTransaction(txXDR string) (*in
 		return nil, m.simulateErr
 	}
 	return m.simulateResult, nil
-}
-
-func TestValidateAddress(t *testing.T) {
-	// Test valid G address (account)
-	validGAddress := "GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
-	err := internal.ValidateAddress(validGAddress)
-	assert.NoError(t, err)
-
-	// Test valid C address (contract)
-	validCAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
-	err = internal.ValidateAddress(validCAddress)
-	assert.NoError(t, err)
-
-	// Test invalid address
-	invalidAddress := "invalid_address"
-	err = internal.ValidateAddress(invalidAddress)
-	assert.Error(t, err)
-
-	// Test empty address
-	err = internal.ValidateAddress("")
-	assert.Error(t, err)
 }
 
 // TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation tests that contract funding
