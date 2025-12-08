@@ -15,16 +15,6 @@ type NetworkError interface {
 	DiagnosticEventStrings() []string
 }
 
-// SimulateTransactionResult contains the result of simulating a transaction.
-type SimulateTransactionResult struct {
-	// TransactionDataXDR is the SorobanTransactionData XDR in base64.
-	TransactionDataXDR string
-	// MinResourceFee is the minimum resource fee required for the transaction.
-	MinResourceFee int64
-	// ResultXDR is the ScVal XDR result from simulation in base64 (for read-only calls).
-	ResultXDR string
-}
-
 // NetworkClient defines a general interface for interacting with Stellar network services.
 // It abstracts the functionality needed for friendbot operations, allowing different
 // implementations (Horizon, RPC, etc.) to be used interchangeably.
@@ -50,4 +40,14 @@ type AccountDetails struct {
 // ParseSequenceNumber returns the sequence number as int64.
 func (a *AccountDetails) ParseSequenceNumber() (int64, error) {
 	return a.Sequence, nil
+}
+
+// SimulateTransactionResult contains the result of simulating a transaction.
+type SimulateTransactionResult struct {
+	// TransactionDataXDR is the SorobanTransactionData XDR in base64.
+	TransactionDataXDR string
+	// MinResourceFee is the minimum resource fee required for the transaction.
+	MinResourceFee int64
+	// ResultXDR is the ScVal XDR result from simulation in base64 (for read-only calls).
+	ResultXDR string
 }

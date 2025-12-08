@@ -364,22 +364,21 @@ func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byt
 		return [32]byte{}, "", errors.Wrap(err, "unable to parse soroban transaction data")
 	}
 
-	// Update the operation with Soroban resource data from simulation
+	// Set the Soroban resource data on the operation.
+	// The txnbuild package automatically includes the resource fee from the
+	// SorobanTransactionData when calculating the total transaction fee.
 	invokeOp.Ext = xdr.TransactionExt{
 		V:           1,
 		SorobanData: &sorobanData,
 	}
 
-	// Calculate the total fee (base fee + resource fee)
-	totalFee := minion.BaseFee + simResult.MinResourceFee
-
-	// Rebuild the transaction with the updated operation and fees
+	// Rebuild the transaction with the updated operation containing Soroban data.
 	tx, err = txnbuild.NewTransaction(
 		txnbuild.TransactionParams{
 			SourceAccount:        minion.Account,
 			IncrementSequenceNum: true,
 			Operations:           []txnbuild.Operation{&invokeOp},
-			BaseFee:              totalFee,
+			BaseFee:              minion.BaseFee,
 			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()},
 		},
 	)
