@@ -39,9 +39,17 @@ func initFriendbot(
 	// Guarantee that friendbotSecret is a seed, if not blank.
 	strkey.MustDecode(strkey.VersionByteSeed, friendbotSecret)
 
+	botKP, err := keypair.Parse(friendbotSecret)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing bot keypair")
+	}
+	// Casting from the interface type will work, since we
+	// already confirmed that friendbotSecret is a seed.
+	botKeypair := botKP.(*keypair.Full)
+
 	var networkClient internal.NetworkClient
 	if rpcURL != "" {
-		networkClient = rpcnetworkclient.NewNetworkClient(rpcURL, http.DefaultClient)
+		networkClient = rpcnetworkclient.NewNetworkClient(rpcURL, http.DefaultClient, networkPassphrase)
 	} else {
 		hclient := &horizonclient.Client{
 			HorizonURL: horizonURL,
@@ -51,14 +59,6 @@ func initFriendbot(
 		networkClient = horizonnetworkclient.NewNetworkClient(hclient)
 	}
 
-	botKP, err := keypair.Parse(friendbotSecret)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing bot keypair")
-	}
-
-	// Casting from the interface type will work, since we
-	// already confirmed that friendbotSecret is a seed.
-	botKeypair := botKP.(*keypair.Full)
 	botAccount := internal.Account{AccountID: botKeypair.Address()}
 	// set default values
 	minionBalance := "101.00"

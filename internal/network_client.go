@@ -46,8 +46,6 @@ func (a *AccountDetails) ParseSequenceNumber() (int64, error) {
 type SimulateTransactionResult struct {
 	// TransactionDataXDR is the SorobanTransactionData XDR in base64.
 	TransactionDataXDR string
-	// MinResourceFee is the minimum resource fee required for the transaction.
-	MinResourceFee int64
 	// ResultXDR is the ScVal XDR return value from simulation in base64.
 	ResultXDR string
 }

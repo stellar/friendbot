@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,9 +14,7 @@ import (
 	"github.com/stellar/friendbot/internal/testutil"
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/txnbuild"
-	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +62,7 @@ func setupRPCIntegration(t *testing.T) *rpcIntegrationSetup {
 	require.NoError(t, err)
 
 	// Create RPC client
-	rpcClient := rpcnetworkclient.NewNetworkClient(rpcURL, http.DefaultClient)
+	rpcClient := rpcnetworkclient.NewNetworkClient(rpcURL, http.DefaultClient, networkPassphrase)
 
 	// Create minion that will fund accounts
 	minion := internal.Minion{
@@ -97,102 +94,18 @@ func setupRPCIntegration(t *testing.T) *rpcIntegrationSetup {
 	}
 }
 
-// getContractBalance queries the native SAC contract's balance function to get the XLM balance
-// of a contract address. Returns the balance as a string in stroops.
-//
-//nolint:unparam // contractAddress varies in actual use, tests happen to use same value
+// getContractBalance queries the contract's native XLM balance via GetAccountDetails.
+// Returns the balance in stroops.
 func getContractBalance(t *testing.T, setup *rpcIntegrationSetup, contractAddress string) int64 {
 	t.Helper()
 
-	// Decode the contract address to get the contract ID
-	contractIDBytes, err := strkey.Decode(strkey.VersionByteContract, contractAddress)
+	details, err := setup.NetworkClient.GetAccountDetails(contractAddress)
 	require.NoError(t, err)
 
-	// Convert to xdr.ContractId (which is a typedef for Hash, which is [32]byte)
-	var contractID xdr.ContractId
-	copy(contractID[:], contractIDBytes)
-
-	// Get the native asset contract ID
-	nativeSACIDBytes, err := xdr.MustNewNativeAsset().ContractID(setup.NetworkPassphrase)
+	balanceStroops, err := amount.ParseInt64(details.Balance)
 	require.NoError(t, err)
 
-	// Convert to xdr.ContractId
-	nativeSACID := xdr.ContractId(nativeSACIDBytes)
-
-	// Build the balance function call
-	// balance(id: Address) -> i128
-	contractIDScAddress := xdr.ScAddress{
-		Type:       xdr.ScAddressTypeScAddressTypeContract,
-		ContractId: &contractID,
-	}
-
-	invokeOp := txnbuild.InvokeHostFunction{
-		HostFunction: xdr.HostFunction{
-			Type: xdr.HostFunctionTypeHostFunctionTypeInvokeContract,
-			InvokeContract: &xdr.InvokeContractArgs{
-				ContractAddress: xdr.ScAddress{
-					Type:       xdr.ScAddressTypeScAddressTypeContract,
-					ContractId: &nativeSACID,
-				},
-				FunctionName: xdr.ScSymbol("balance"),
-				Args: xdr.ScVec{
-					xdr.ScVal{
-						Type:    xdr.ScValTypeScvAddress,
-						Address: &contractIDScAddress,
-					},
-				},
-			},
-		},
-		SourceAccount: setup.MinionKeypair.Address(),
-	}
-
-	// Get account details for sequence number
-	accountDetails, err := setup.NetworkClient.GetAccountDetails(setup.MinionKeypair.Address())
-	require.NoError(t, err)
-
-	seqNum, err := accountDetails.ParseSequenceNumber()
-	require.NoError(t, err)
-
-	// Build the transaction
-	tx, err := txnbuild.NewTransaction(
-		txnbuild.TransactionParams{
-			SourceAccount: &txnbuild.SimpleAccount{
-				AccountID: setup.MinionKeypair.Address(),
-				Sequence:  seqNum,
-			},
-			IncrementSequenceNum: true,
-			Operations:           []txnbuild.Operation{&invokeOp},
-			BaseFee:              txnbuild.MinBaseFee,
-			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()},
-		},
-	)
-	require.NoError(t, err)
-
-	// Serialize for simulation
-	txXDR, err := tx.Base64()
-	require.NoError(t, err)
-
-	// Simulate the transaction
-	simResult, err := setup.NetworkClient.SimulateTransaction(txXDR)
-	require.NoError(t, err)
-
-	// Parse the result - it should contain an i128 value
-	// The result is in the simulation response's results array
-	require.NotEmpty(t, simResult.ResultXDR, "simulation should return a result")
-
-	var resultVal xdr.ScVal
-	err = xdr.SafeUnmarshalBase64(simResult.ResultXDR, &resultVal)
-	require.NoError(t, err)
-
-	// The balance is returned as an i128
-	require.Equal(t, xdr.ScValTypeScvI128, resultVal.Type, "expected i128 result type")
-
-	i128 := resultVal.MustI128()
-	// For balances that fit in int64, the high part should be 0 and low part should not overflow
-	require.Equal(t, int64(0), int64(i128.Hi), "balance too large for int64")
-	require.LessOrEqual(t, i128.Lo, uint64(math.MaxInt64), "balance overflows int64")
-
-	return int64(i128.Lo) //nolint:gosec // overflow checked above
+	return balanceStroops
 }
 
 func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {

@@ -8,15 +8,21 @@ import (
 	"testing"
 
 	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/network"
 	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// testNetworkPassphrase is the network passphrase used for tests.
+const testNetworkPassphrase = network.TestNetworkPassphrase
+
 func TestNewNetworkClient(t *testing.T) {
-	client := NewNetworkClient("http://localhost:8080", nil)
+	client := NewNetworkClient("http://localhost:8080", nil, testNetworkPassphrase)
 	assert.NotNil(t, client)
 	assert.NotNil(t, client.client)
+	// nativeSACID should be derived from the network passphrase
+	assert.NotEqual(t, xdr.Hash{}, client.nativeSACID)
 }
 
 func TestNetworkError_IsNotFound(t *testing.T) {
@@ -117,7 +123,7 @@ func TestNetworkClient_GetAccountDetails_Success(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewNetworkClient(server.URL, nil)
+	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
 	details, err := client.GetAccountDetails(testAccountID)
 
 	require.NoError(t, err)
@@ -139,7 +145,7 @@ func TestNetworkClient_GetAccountDetails_NotFound(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewNetworkClient(server.URL, nil)
+	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
 	details, err := client.GetAccountDetails(testAccountID)
 
 	assert.Nil(t, details)
@@ -157,7 +163,7 @@ func TestNetworkClient_GetAccountDetails_InvalidAccountID(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewNetworkClient(server.URL, nil)
+	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
 	details, err := client.GetAccountDetails("invalid-account-id")
 
 	assert.Nil(t, details)
@@ -188,7 +194,7 @@ func TestNetworkClient_SubmitTransaction_Success(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewNetworkClient(server.URL, nil)
+	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
 	err := client.SubmitTransaction(testTxXDR)
 
 	assert.NoError(t, err)
@@ -210,7 +216,7 @@ func TestNetworkClient_SubmitTransaction_Rejected(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewNetworkClient(server.URL, nil)
+	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
 	err := client.SubmitTransaction(testTxXDR)
 
 	require.Error(t, err)
@@ -250,7 +256,7 @@ func TestNetworkClient_SubmitTransaction_Failed(t *testing.T) {
 	})
 	defer server.Close()
 
-	client := NewNetworkClient(server.URL, nil)
+	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
 	err := client.SubmitTransaction(testTxXDR)
 
 	require.Error(t, err)

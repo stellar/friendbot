@@ -425,7 +425,6 @@ func TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation(t *testing.
 		simulateResult: &internal.SimulateTransactionResult{
 			// Valid SorobanTransactionData XDR with empty footprint and 100000 instructions/resource fee
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
-			MinResourceFee:     100000,
 		},
 	}
 
@@ -494,7 +493,6 @@ func TestFriendbotAPI_ContractFunding_POST(t *testing.T) {
 	mockNetworkClient := &mockNetworkClientWithSimulation{
 		simulateResult: &internal.SimulateTransactionResult{
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
-			MinResourceFee:     100000,
 		},
 	}
 
@@ -603,9 +601,9 @@ func TestFriendbotAPI_ContractFunding_SimulationError(t *testing.T) {
 	assert.NotContains(t, body, `"invalid_field"`)
 }
 
-// TestFriendbotAPI_ContractDoesNotCheckBalance tests that contracts skip balance check
-// (unlike accounts, we don't check if a contract is "already funded")
-func TestFriendbotAPI_ContractDoesNotCheckBalance(t *testing.T) {
+// TestFriendbotAPI_ContractChecksBalance tests that contracts have their balance checked
+// just like accounts, to prevent over-funding
+func TestFriendbotAPI_ContractChecksBalance(t *testing.T) {
 	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, txHash [32]byte, tx string) (*internal.TransactionResult, error) {
 		txSuccess := internal.TransactionResult{
 			EnvelopeXdr: tx,
@@ -615,11 +613,11 @@ func TestFriendbotAPI_ContractDoesNotCheckBalance(t *testing.T) {
 		return &txSuccess, nil
 	}
 
-	// This mock should never be called for contract addresses
+	// This mock should be called for contract addresses now
 	mockCheckAccountExistsCalled := false
 	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		mockCheckAccountExistsCalled = true
-		return true, "10000.00", nil // Would normally block funding for accounts
+		return true, "0", nil // Return low balance so funding proceeds
 	}
 
 	botSeed := "SCWNLYELENPBXN46FHYXETT5LJCYBZD5VUQQVW4KZPHFO2YTQJUWT4D5"
@@ -634,7 +632,6 @@ func TestFriendbotAPI_ContractDoesNotCheckBalance(t *testing.T) {
 	mockNetworkClient := &mockNetworkClientWithSimulation{
 		simulateResult: &internal.SimulateTransactionResult{
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
-			MinResourceFee:     100000,
 		},
 	}
 
@@ -667,11 +664,11 @@ func TestFriendbotAPI_ContractDoesNotCheckBalance(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	// Should succeed because contracts don't have balance checks
+	// Should succeed because balance is below starting balance
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// CheckAccountExists should NOT have been called for contract addresses
-	assert.False(t, mockCheckAccountExistsCalled, "CheckAccountExists should not be called for contract addresses")
+	// CheckAccountExists SHOULD be called for contract addresses now
+	assert.True(t, mockCheckAccountExistsCalled, "CheckAccountExists should be called for contract addresses")
 }
 
 // TestFriendbotAPI_GAddressStillWorksWithSimulationClient tests that G addresses
@@ -704,7 +701,6 @@ func TestFriendbotAPI_GAddressStillWorksWithSimulationClient(t *testing.T) {
 	mockNetworkClient := &mockNetworkClientWithSimulation{
 		simulateResult: &internal.SimulateTransactionResult{
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
-			MinResourceFee:     100000,
 		},
 	}
 	// Wrap to track if simulate is called

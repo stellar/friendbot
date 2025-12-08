@@ -96,13 +96,15 @@ func (handler *FriendbotHandler) loadAddress(ctx context.Context, r *http.Reques
 		return unescaped, err
 	}
 
+	// Log the address for tracing (even if invalid)
+	span.SetAttributes(attribute.String("destination.address", unescaped))
+
 	// Accept both G addresses (accounts) and C addresses (contracts)
 	if !strkey.IsValidEd25519PublicKey(unescaped) && !strkey.IsValidContractAddress(unescaped) {
 		err = errors.New("invalid address: must be a valid G or C address")
 		span.SetStatus(codes.Error, err.Error())
 		return unescaped, err
 	}
-	span.SetAttributes(attribute.String("destination.account", address))
 	span.SetStatus(codes.Ok, codes.Ok.String())
 	return unescaped, nil
 }

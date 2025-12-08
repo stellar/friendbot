@@ -6,10 +6,14 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go/clients/horizonclient"
+	"github.com/stellar/go/strkey"
 )
 
 // ErrSimulationNotSupported is returned when SimulateTransaction is called on a Horizon client.
 var ErrSimulationNotSupported = errors.New("transaction simulation is not supported by Horizon, configure rpc_url instead of horizon_url to fund contract addresses")
+
+// ErrContractAddressNotSupported is returned when GetAccountDetails is called with a contract address on a Horizon client.
+var ErrContractAddressNotSupported = errors.New("contract addresses are not supported by Horizon, configure rpc_url instead of horizon_url to fund contract addresses")
 
 // NetworkError wraps a horizon error and implements the internal.NetworkError interface.
 type NetworkError struct {
@@ -86,8 +90,14 @@ func (h *NetworkClient) SubmitTransaction(txXDR string) error {
 }
 
 // GetAccountDetails retrieves account details using the underlying horizon client.
-func (h *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
-	request := horizonclient.AccountRequest{AccountID: accountID}
+// For contract addresses (C addresses), this returns an error since Horizon cannot query contract balances.
+func (h *NetworkClient) GetAccountDetails(address string) (*internal.AccountDetails, error) {
+	// Contract addresses are not supported by Horizon
+	if strkey.IsValidContractAddress(address) {
+		return nil, ErrContractAddressNotSupported
+	}
+
+	request := horizonclient.AccountRequest{AccountID: address}
 	account, err := h.client.AccountDetail(request)
 	if err != nil {
 		if hErr, ok := err.(*horizonclient.Error); ok {
