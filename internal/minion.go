@@ -312,9 +312,10 @@ func (minion *Minion) makePaymentTx(destAddress string) ([32]byte, string, error
 
 // makeContractPaymentTx creates a transaction that transfers native XLM to a contract
 // using the native Stellar Asset Contract (SAC) transfer function.
-// This requires simulation to get the resource fees and auth entries.
+// This requires simulation to get the resource fees.
 func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byte, string, error) {
-	// Create the InvokeHostFunction operation using PaymentToContract helper
+	// Create the InvokeHostFunction operation using PaymentToContract helper.
+	// This helper builds the SAC transfer invocation and sets up the auth entry.
 	invokeOp, err := txnbuild.NewPaymentToContract(txnbuild.PaymentToContractParams{
 		NetworkPassphrase: minion.Network,
 		Destination:       destContractAddress,
@@ -326,7 +327,7 @@ func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byt
 		return [32]byte{}, "", errors.Wrap(err, "unable to create payment to contract operation")
 	}
 
-	// Build the initial transaction for simulation (without Soroban data)
+	// Build the initial transaction for simulation (with auth, without Soroban resource data)
 	tx, err := txnbuild.NewTransaction(
 		txnbuild.TransactionParams{
 			SourceAccount:        minion.Account,
@@ -346,7 +347,7 @@ func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byt
 		return [32]byte{}, "", errors.Wrap(err, "unable to serialize tx for simulation")
 	}
 
-	// Simulate the transaction to get resource fees and auth entries
+	// Simulate the transaction to get resource fees
 	simResult, err := minion.NetworkClient.SimulateTransaction(txXDR)
 	if err != nil {
 		return [32]byte{}, "", errors.Wrap(err, "unable to simulate transaction")
@@ -358,22 +359,11 @@ func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byt
 		return [32]byte{}, "", errors.Wrap(err, "unable to parse soroban transaction data")
 	}
 
-	// Parse auth entries from simulation result
-	var authEntries []xdr.SorobanAuthorizationEntry
-	for _, authXDR := range simResult.AuthXDR {
-		var authEntry xdr.SorobanAuthorizationEntry
-		if err := xdr.SafeUnmarshalBase64(authXDR, &authEntry); err != nil {
-			return [32]byte{}, "", errors.Wrap(err, "unable to parse auth entry")
-		}
-		authEntries = append(authEntries, authEntry)
-	}
-
-	// Update the operation with simulation results
+	// Update the operation with Soroban resource data from simulation
 	invokeOp.Ext = xdr.TransactionExt{
 		V:           1,
 		SorobanData: &sorobanData,
 	}
-	invokeOp.Auth = authEntries
 
 	// Calculate the total fee (base fee + resource fee)
 	totalFee := minion.BaseFee + simResult.MinResourceFee

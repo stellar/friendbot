@@ -21,8 +21,6 @@ type SimulateTransactionResult struct {
 	TransactionDataXDR string
 	// MinResourceFee is the minimum resource fee required for the transaction.
 	MinResourceFee int64
-	// AuthXDR is the list of SorobanAuthorizationEntry XDRs in base64.
-	AuthXDR []string
 	// ResultXDR is the ScVal XDR result from simulation in base64 (for read-only calls).
 	ResultXDR string
 }

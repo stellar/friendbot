@@ -185,7 +185,7 @@ func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string
 }
 
 // SimulateTransaction simulates a transaction using the underlying RPC client.
-// This is required for Soroban transactions to get resource fees and auth entries.
+// This is required for Soroban transactions to get resource fees.
 func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
 	defer cancel()
@@ -203,13 +203,9 @@ func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTra
 		return nil, &NetworkError{err: fmt.Errorf("simulation error: %s", response.Error)}
 	}
 
-	// Collect auth entries and result from all results
-	var authXDR []string
+	// Extract result XDR if present (for read-only calls)
 	var resultXDR string
 	for _, result := range response.Results {
-		if result.AuthXDR != nil {
-			authXDR = append(authXDR, *result.AuthXDR...)
-		}
 		if result.ReturnValueXDR != nil && resultXDR == "" {
 			resultXDR = *result.ReturnValueXDR
 		}
@@ -218,7 +214,6 @@ func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTra
 	return &internal.SimulateTransactionResult{
 		TransactionDataXDR: response.TransactionDataXDR,
 		MinResourceFee:     response.MinResourceFee,
-		AuthXDR:            authXDR,
 		ResultXDR:          resultXDR,
 	}, nil
 }

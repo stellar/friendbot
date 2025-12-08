@@ -462,7 +462,6 @@ func TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation(t *testing.
 			// Valid SorobanTransactionData XDR with empty footprint and 100000 instructions/resource fee
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
 			MinResourceFee:     100000,
-			AuthXDR:            []string{},
 		},
 	}
 
@@ -532,7 +531,6 @@ func TestFriendbotAPI_ContractFunding_POST(t *testing.T) {
 		simulateResult: &internal.SimulateTransactionResult{
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
 			MinResourceFee:     100000,
-			AuthXDR:            []string{},
 		},
 	}
 
@@ -673,7 +671,6 @@ func TestFriendbotAPI_ContractDoesNotCheckBalance(t *testing.T) {
 		simulateResult: &internal.SimulateTransactionResult{
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
 			MinResourceFee:     100000,
-			AuthXDR:            []string{},
 		},
 	}
 
@@ -744,7 +741,6 @@ func TestFriendbotAPI_GAddressStillWorksWithSimulationClient(t *testing.T) {
 		simulateResult: &internal.SimulateTransactionResult{
 			TransactionDataXDR: "AAAAAAAAAAAAAAAAAAGGoAAAAAAAAAAAAAAAAAABhqA=",
 			MinResourceFee:     100000,
-			AuthXDR:            []string{},
 		},
 	}
 	// Wrap to track if simulate is called
