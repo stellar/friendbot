@@ -9,7 +9,7 @@ import (
 )
 
 // ErrSimulationNotSupported is returned when SimulateTransaction is called on a Horizon client.
-var ErrSimulationNotSupported = errors.New("transaction simulation is not supported by Horizon, use RPC instead")
+var ErrSimulationNotSupported = errors.New("transaction simulation is not supported by Horizon, configure rpc_url instead of horizon_url to fund contract addresses")
 
 // NetworkError wraps a horizon error and implements the internal.NetworkError interface.
 type NetworkError struct {
