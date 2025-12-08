@@ -203,7 +203,7 @@ func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTra
 		return nil, &NetworkError{err: fmt.Errorf("simulation error: %s", response.Error)}
 	}
 
-	// Extract result XDR if present (for read-only calls)
+	// Extract result XDR if present
 	var resultXDR string
 	for _, result := range response.Results {
 		if result.ReturnValueXDR != nil && resultXDR == "" {

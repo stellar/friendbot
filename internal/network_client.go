@@ -48,6 +48,6 @@ type SimulateTransactionResult struct {
 	TransactionDataXDR string
 	// MinResourceFee is the minimum resource fee required for the transaction.
 	MinResourceFee int64
-	// ResultXDR is the ScVal XDR result from simulation in base64 (for read-only calls).
+	// ResultXDR is the ScVal XDR return value from simulation in base64.
 	ResultXDR string
 }
