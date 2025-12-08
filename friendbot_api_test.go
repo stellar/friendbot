@@ -415,22 +415,6 @@ func TestValidateAddress(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestIsContractAddress(t *testing.T) {
-	// Test G address (not a contract)
-	gAddress := "GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
-	assert.False(t, internal.IsContractAddress(gAddress))
-
-	// Test C address (contract)
-	cAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
-	assert.True(t, internal.IsContractAddress(cAddress))
-
-	// Test invalid address
-	assert.False(t, internal.IsContractAddress("invalid"))
-
-	// Test empty address
-	assert.False(t, internal.IsContractAddress(""))
-}
-
 // TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation tests that contract funding
 // succeeds when simulation returns valid data
 func TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation(t *testing.T) {

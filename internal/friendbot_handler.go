@@ -119,9 +119,3 @@ func ValidateAddress(address string) error {
 
 	return err
 }
-
-// IsContractAddress returns true if the address is a contract address (C address).
-func IsContractAddress(address string) bool {
-	_, err := strkey.Decode(strkey.VersionByteContract, address)
-	return err == nil
-}
