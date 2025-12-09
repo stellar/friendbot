@@ -9,20 +9,22 @@ import (
 	"testing"
 
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // testNetworkPassphrase is the network passphrase used for tests.
-const testNetworkPassphrase = "unit test network passphrase"
+const testNetworkPassphrase = network.TestNetworkPassphrase
 
 func TestNewNetworkClient(t *testing.T) {
 	client := NewNetworkClient("http://localhost:8080", nil, testNetworkPassphrase)
 	assert.NotNil(t, client)
 	assert.NotNil(t, client.client)
 	// nativeSACID should be derived from the network passphrase
-	assert.NotEqual(t, hex.DecodeString("9d8b75961b8353c26a2327115bddb01f445b669c1d731a6997e81581f6f467a3"), client.nativeSACID)
+	expectedSACID, err := hex.DecodeString("9d8b75961b8353c26a2327115bddb01f445b669c1d731a6997e81581f6f467a3")
+	require.NoError(t, err)
+	assert.Equal(t, expectedSACID, client.nativeSACID[:])
 }
 
 func TestNetworkError_IsNotFound(t *testing.T) {
