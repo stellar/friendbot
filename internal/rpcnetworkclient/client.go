@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -385,13 +386,13 @@ func (r *NetworkClient) getContractDetails(contractAddress string) (*internal.Ac
 
 	i128 := resultVal.MustI128()
 	// For balances that fit in int64, convert to string format
-	// The high part should be 0 for reasonable balances
-	if i128.Hi != 0 {
+	// The high part should be 0 and low part must fit in int64 for reasonable balances
+	if i128.Hi != 0 || i128.Lo > math.MaxInt64 {
 		return nil, &NetworkError{err: fmt.Errorf("balance too large")}
 	}
 
 	// Convert stroops to XLM string format
-	balance := amount.StringFromInt64(int64(i128.Lo))
+	balance := amount.StringFromInt64(int64(i128.Lo)) //nolint:gosec // overflow checked above
 
 	return &internal.AccountDetails{
 		Sequence: 0, // Contracts don't have sequence numbers
