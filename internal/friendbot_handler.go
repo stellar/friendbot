@@ -33,6 +33,7 @@ func NewFriendbotHandler(fb *Bot) *FriendbotHandler {
 		Friendbot: fb,
 		tracer:    tracer,
 	}
+
 }
 
 // Handle is a method that implements http.HandlerFunc
