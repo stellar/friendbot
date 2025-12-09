@@ -94,9 +94,9 @@ func setupRPCIntegration(t *testing.T) *rpcIntegrationSetup {
 	}
 }
 
-// getContractBalance queries the contract's native XLM balance via GetAccountDetails.
+// getBalance queries the native XLM balance via GetAccountDetails.
 // Returns the balance in stroops.
-func getContractBalance(t *testing.T, setup *rpcIntegrationSetup, contractAddress string) int64 {
+func getBalance(t *testing.T, setup *rpcIntegrationSetup, contractAddress string) int64 {
 	t.Helper()
 
 	details, err := setup.NetworkClient.GetAccountDetails(contractAddress)
@@ -396,7 +396,7 @@ func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	// Get balance before funding
-	balanceBefore := getContractBalance(t, setup, contractAddress)
+	balanceBefore := getBalance(t, setup, contractAddress)
 	t.Logf("Contract balance before funding: %d stroops", balanceBefore)
 
 	req := httptest.NewRequest("GET", "/?addr="+url.QueryEscape(contractAddress), nil)
@@ -420,7 +420,7 @@ func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Get balance after funding and verify it increased by the starting balance
-	balanceAfter := getContractBalance(t, setup, contractAddress)
+	balanceAfter := getBalance(t, setup, contractAddress)
 	t.Logf("Contract balance after funding: %d stroops", balanceAfter)
 
 	// Convert starting balance to stroops
@@ -443,7 +443,7 @@ func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	// Get balance before funding
-	balanceBefore := getContractBalance(t, setup, contractAddress)
+	balanceBefore := getBalance(t, setup, contractAddress)
 	t.Logf("Contract balance before funding: %d stroops", balanceBefore)
 
 	formData := url.Values{}
@@ -471,7 +471,7 @@ func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Get balance after funding and verify it increased by the starting balance
-	balanceAfter := getContractBalance(t, setup, contractAddress)
+	balanceAfter := getBalance(t, setup, contractAddress)
 	t.Logf("Contract balance after funding: %d stroops", balanceAfter)
 
 	// Convert starting balance to stroops
