@@ -9,14 +9,13 @@ import (
 	"testing"
 
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/network"
 	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // testNetworkPassphrase is the network passphrase used for tests.
-const testNetworkPassphrase = network.TestNetworkPassphrase
+const testNetworkPassphrase = "unit test network passphrase"
 
 func TestNewNetworkClient(t *testing.T) {
 	client := NewNetworkClient("http://localhost:8080", nil, testNetworkPassphrase)
