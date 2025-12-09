@@ -56,6 +56,8 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		AppName:    "friendbot-integration-test",
 	}
 
+	networkClient := horizonnetworkclient.NewNetworkClient(hclient)
+
 	// Create minion that will fund accounts
 	minion := internal.Minion{
 		Account: internal.Account{
@@ -64,7 +66,7 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		Keypair:              minionKeypair,
 		BotAccount:           botAccount,
 		BotKeypair:           botKeypair,
-		NetworkClient:        horizonnetworkclient.NewNetworkClient(hclient),
+		NetworkClient:        networkClient,
 		Network:              networkPassphrase,
 		StartingBalance:      startingBalance,
 		SubmitTransaction:    internal.SubmitTransaction,
@@ -73,7 +75,7 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		BaseFee:              baseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: networkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)

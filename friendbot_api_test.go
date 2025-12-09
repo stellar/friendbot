@@ -60,7 +60,8 @@ func setup(t *testing.T) http.Handler {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	networkClient := &mockNetworkClient{}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: networkClient}
 
 	// Register problem handlers (normally done in main)
 	registerProblems()
@@ -192,6 +193,8 @@ func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 	minionKeypair, err := keypair.Parse(minionSeed)
 	require.NoError(t, err)
 
+	networkClient := &mockNetworkClient{}
+
 	minion := internal.Minion{
 		Account: internal.Account{
 			AccountID: minionKeypair.Address(),
@@ -200,7 +203,7 @@ func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 		Keypair:              minionKeypair.(*keypair.Full),
 		BotAccount:           botAccount,
 		BotKeypair:           botKeypair.(*keypair.Full),
-		NetworkClient:        nil, // Not used in mocks
+		NetworkClient:        networkClient,
 		Network:              "Test SDF Network ; September 2015",
 		StartingBalance:      "10000.00",
 		SubmitTransaction:    mockSubmitTransaction,
@@ -209,7 +212,7 @@ func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: networkClient}
 
 	cfg := Config{UseCloudflareIP: false}
 	router := initRouter(cfg, fb)
@@ -276,24 +279,11 @@ func TestFriendbotAPI_MethodNotAllowed(t *testing.T) {
 	}
 }
 
-func TestFriendbotAPI_ValidContractAddress(t *testing.T) {
-	// Test that a valid C address (contract) is accepted by the handler
-	// This tests address validation only, not the actual contract funding flow
-	// since that requires RPC simulation
+func TestFriendbotAPI_ContractAddressNotSupported(t *testing.T) {
+	// Test that a valid C address (contract) is rejected when contract addresses
+	// are not supported (e.g., Horizon-only configuration)
 
-	// Create a mock that simulates a contract funding attempt
-	mockSubmitTransaction := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, txHash [32]byte, tx string) (*internal.TransactionResult, error) {
-		txSuccess := internal.TransactionResult{
-			EnvelopeXdr: tx,
-			Successful:  true,
-			Hash:        hex.EncodeToString(txHash[:]),
-		}
-		return &txSuccess, nil
-	}
-
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
-		return false, "0", nil
-	}
+	networkClient := &mockNetworkClient{} // SupportsContractAddresses() returns false
 
 	botSeed := "SCWNLYELENPBXN46FHYXETT5LJCYBZD5VUQQVW4KZPHFO2YTQJUWT4D5"
 	botKeypair, err := keypair.Parse(botSeed)
@@ -304,12 +294,6 @@ func TestFriendbotAPI_ValidContractAddress(t *testing.T) {
 	minionKeypair, err := keypair.Parse(minionSeed)
 	require.NoError(t, err)
 
-	// Create a mock network client that returns an error for simulation
-	// (this simulates the case where Horizon is used instead of RPC)
-	mockNetworkClient := &mockNetworkClientWithSimulation{
-		simulateErr: horizonnetworkclient.ErrSimulationNotSupported,
-	}
-
 	minion := internal.Minion{
 		Account: internal.Account{
 			AccountID: minionKeypair.Address(),
@@ -318,22 +302,21 @@ func TestFriendbotAPI_ValidContractAddress(t *testing.T) {
 		Keypair:              minionKeypair.(*keypair.Full),
 		BotAccount:           botAccount,
 		BotKeypair:           botKeypair.(*keypair.Full),
-		NetworkClient:        mockNetworkClient,
+		NetworkClient:        networkClient,
 		Network:              "Test SDF Network ; September 2015",
 		StartingBalance:      "10000.00",
-		SubmitTransaction:    mockSubmitTransaction,
+		SubmitTransaction:    internal.SubmitTransaction,
 		CheckSequenceRefresh: internal.CheckSequenceRefresh,
-		CheckAccountExists:   mockCheckAccountExists,
+		CheckAccountExists:   internal.CheckAccountExists,
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: networkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
 
 	// Use a valid C address (contract address)
-	// This is a sample contract address for testing
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	req := httptest.NewRequest("GET", "/?addr="+url.QueryEscape(contractAddress), nil)
@@ -341,17 +324,14 @@ func TestFriendbotAPI_ValidContractAddress(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	// The request should fail because simulation is not supported,
-	// but it should NOT fail due to address validation
-	// The error should be related to the transaction building, not address validation
-	// It returns 500 because it's a server-side issue (lack of RPC support)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	// Should return 400 Bad Request because contract addresses are not supported
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	body := w.Body.String()
-	// Should NOT contain "invalid_field" error for "addr" (address validation passed)
-	assert.NotContains(t, body, `"invalid_field"`)
-	// Should be a server error, not a bad request
-	assert.Contains(t, body, "Internal Server Error")
+	// Should contain "invalid_field" error for "addr"
+	assert.Contains(t, body, `"invalid_field"`)
+	assert.Contains(t, body, `"addr"`)
+	assert.Contains(t, body, "contract addresses are not supported")
 }
 
 func TestFriendbotAPI_InvalidContractAddress(t *testing.T) {
@@ -373,7 +353,26 @@ func TestFriendbotAPI_InvalidContractAddress(t *testing.T) {
 	assert.Contains(t, body, `"addr"`)
 }
 
-// mockNetworkClientWithSimulation implements internal.NetworkClient for testing
+// mockNetworkClient implements internal.NetworkClient for basic testing without contract support
+type mockNetworkClient struct{}
+
+func (m *mockNetworkClient) SubmitTransaction(txXDR string) error {
+	return nil
+}
+
+func (m *mockNetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
+	return nil, nil
+}
+
+func (m *mockNetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+	return nil, horizonnetworkclient.ErrSimulationNotSupported
+}
+
+func (m *mockNetworkClient) SupportsContractAddresses() bool {
+	return false
+}
+
+// mockNetworkClientWithSimulation implements internal.NetworkClient for testing with contract support
 type mockNetworkClientWithSimulation struct {
 	simulateResult *internal.SimulateTransactionResult
 	simulateErr    error
@@ -392,6 +391,11 @@ func (m *mockNetworkClientWithSimulation) SimulateTransaction(txXDR string) (*in
 		return nil, m.simulateErr
 	}
 	return m.simulateResult, nil
+}
+
+func (m *mockNetworkClientWithSimulation) SupportsContractAddresses() bool {
+	// Return true to allow contract address tests to proceed
+	return true
 }
 
 // TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation tests that contract funding
@@ -445,7 +449,7 @@ func TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation(t *testing.
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -513,7 +517,7 @@ func TestFriendbotAPI_ContractFunding_POST(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -581,7 +585,7 @@ func TestFriendbotAPI_ContractFunding_SimulationError(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -652,7 +656,7 @@ func TestFriendbotAPI_ContractChecksBalance(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -708,6 +712,7 @@ func TestFriendbotAPI_GAddressStillWorksWithSimulationClient(t *testing.T) {
 	mockNetworkClient.simulateResult = nil
 	mockNetworkClient.simulateErr = nil
 
+	trackingClient := &trackingNetworkClient{mockNetworkClient, &simulateCalled}
 	minion := internal.Minion{
 		Account: internal.Account{
 			AccountID: minionKeypair.Address(),
@@ -716,7 +721,7 @@ func TestFriendbotAPI_GAddressStillWorksWithSimulationClient(t *testing.T) {
 		Keypair:              minionKeypair.(*keypair.Full),
 		BotAccount:           botAccount,
 		BotKeypair:           botKeypair.(*keypair.Full),
-		NetworkClient:        &trackingNetworkClient{mockNetworkClient, &simulateCalled},
+		NetworkClient:        trackingClient,
 		Network:              "Test SDF Network ; September 2015",
 		StartingBalance:      "10000.00",
 		SubmitTransaction:    mockSubmitTransaction,
@@ -726,7 +731,7 @@ func TestFriendbotAPI_GAddressStillWorksWithSimulationClient(t *testing.T) {
 	}
 	_ = originalSimulate // suppress unused warning
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: trackingClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -757,4 +762,8 @@ type trackingNetworkClient struct {
 func (t *trackingNetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
 	*t.simulateCalled = true
 	return t.mockNetworkClientWithSimulation.SimulateTransaction(txXDR)
+}
+
+func (t *trackingNetworkClient) SupportsContractAddresses() bool {
+	return t.mockNetworkClientWithSimulation.SupportsContractAddresses()
 }

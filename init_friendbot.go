@@ -77,7 +77,7 @@ func initFriendbot(
 		return nil, errors.Wrap(err, "creating minion accounts")
 	}
 	log.Printf("Adding %d minions to friendbot", len(minions))
-	return &internal.Bot{Minions: minions}, nil
+	return &internal.Bot{Minions: minions, NetworkClient: networkClient}, nil
 }
 
 func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full, networkPassphrase, newAccountBalance, minionBalance string,

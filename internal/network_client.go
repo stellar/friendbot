@@ -29,6 +29,10 @@ type NetworkClient interface {
 	// This is required for Soroban transactions to get resource fees and auth entries.
 	// For network clients that don't support simulation (like Horizon), this returns an error.
 	SimulateTransaction(txXDR string) (*SimulateTransactionResult, error)
+
+	// SupportsContractAddresses returns true if this network client can fund
+	// contract addresses (C addresses). RPC supports this, Horizon does not.
+	SupportsContractAddresses() bool
 }
 
 // AccountDetails contains the minimal information needed about an account.

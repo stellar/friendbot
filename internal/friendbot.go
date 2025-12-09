@@ -10,6 +10,7 @@ import (
 // to its Minions.
 type Bot struct {
 	Minions         []Minion
+	NetworkClient   NetworkClient
 	nextMinionIndex int
 	indexMux        sync.Mutex
 }
@@ -32,4 +33,10 @@ func (bot *Bot) Pay(ctx context.Context, destAddress string) (*TransactionResult
 	maybeSubmitResult := <-resultChan
 	close(resultChan)
 	return maybeSubmitResult.maybeTransactionSuccess, maybeSubmitResult.maybeErr
+}
+
+// SupportsContractAddresses returns true if the bot's network client supports
+// funding contract addresses (C addresses).
+func (bot *Bot) SupportsContractAddresses() bool {
+	return bot.NetworkClient.SupportsContractAddresses()
 }

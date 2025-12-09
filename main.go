@@ -87,6 +87,7 @@ func run(cmd *cobra.Command, args []string) {
 		log.Error(err)
 		os.Exit(1)
 	}
+
 	router := initRouter(cfg, fb)
 	registerProblems()
 

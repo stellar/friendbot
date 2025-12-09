@@ -399,3 +399,8 @@ func (r *NetworkClient) getContractDetails(contractAddress string) (*internal.Ac
 		Balance:  balance,
 	}, nil
 }
+
+// SupportsContractAddresses returns true as RPC can fund contract addresses.
+func (r *NetworkClient) SupportsContractAddresses() bool {
+	return true
+}

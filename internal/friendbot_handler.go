@@ -33,7 +33,6 @@ func NewFriendbotHandler(fb *Bot) *FriendbotHandler {
 		Friendbot: fb,
 		tracer:    tracer,
 	}
-
 }
 
 // Handle is a method that implements http.HandlerFunc
@@ -99,12 +98,24 @@ func (handler *FriendbotHandler) loadAddress(ctx context.Context, r *http.Reques
 	// Log the address for tracing (even if invalid)
 	span.SetAttributes(attribute.String("destination.address", unescaped))
 
-	// Accept both G addresses (accounts) and C addresses (contracts)
-	if !strkey.IsValidEd25519PublicKey(unescaped) && !strkey.IsValidContractAddress(unescaped) {
-		err = errors.New("invalid address: must be a valid G or C address")
-		span.SetStatus(codes.Error, err.Error())
-		return unescaped, err
+	// Check if it's a valid G address (account)
+	if strkey.IsValidEd25519PublicKey(unescaped) {
+		span.SetStatus(codes.Ok, codes.Ok.String())
+		return unescaped, nil
 	}
-	span.SetStatus(codes.Ok, codes.Ok.String())
-	return unescaped, nil
+
+	// Check if it's a valid C address (contract)
+	if strkey.IsValidContractAddress(unescaped) {
+		if !handler.Friendbot.SupportsContractAddresses() {
+			err = errors.New("contract addresses are not supported, configure rpc_url to fund contract addresses")
+			span.SetStatus(codes.Error, err.Error())
+			return unescaped, err
+		}
+		span.SetStatus(codes.Ok, codes.Ok.String())
+		return unescaped, nil
+	}
+
+	err = errors.New("invalid address: must be a valid G or C address")
+	span.SetStatus(codes.Error, err.Error())
+	return unescaped, err
 }

@@ -125,3 +125,8 @@ func (h *NetworkClient) GetAccountDetails(address string) (*internal.AccountDeta
 func (h *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
 	return nil, ErrSimulationNotSupported
 }
+
+// SupportsContractAddresses returns false as Horizon cannot fund contract addresses.
+func (h *NetworkClient) SupportsContractAddresses() bool {
+	return false
+}
