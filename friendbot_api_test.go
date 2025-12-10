@@ -210,7 +210,7 @@ func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 
 	fb := &internal.Bot{Minions: []internal.Minion{minion}}
 
-	cfg := Config{ConfigFile: ConfigFile{UseCloudflareIP: false}}
+	cfg := Config{UseCloudflareIP: false}
 	router := initRouter(cfg, fb)
 
 	recipientAddress := "GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"

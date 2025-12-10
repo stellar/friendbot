@@ -13,7 +13,7 @@ import (
 func TestIPLogging(t *testing.T) {
 	done := log.DefaultLogger.StartTest(log.InfoLevel)
 
-	mux := newMux(Config{ConfigFile: ConfigFile{UseCloudflareIP: true}})
+	mux := newMux(Config{UseCloudflareIP: true})
 	mux.Get("/", func(w http.ResponseWriter, request *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
