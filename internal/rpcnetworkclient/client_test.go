@@ -15,7 +15,7 @@ import (
 )
 
 // testNetworkPassphrase is the network passphrase used for tests.
-const testNetworkPassphrase = "unit test network passphrase"
+const testNetworkPassphrase = "unit test network passphrase" //nolint:gosec
 
 func TestNewNetworkClient(t *testing.T) {
 	client := NewNetworkClient("http://localhost:8080", nil, testNetworkPassphrase)
