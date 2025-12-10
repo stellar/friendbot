@@ -22,11 +22,11 @@ starting_balance = "10000.00"
 `), 0644)
 		require.NoError(t, err)
 
-		cfg, err := loadConfig(confFile, "")
+		cfg, secrets, err := loadConfig(confFile, "")
 		require.NoError(t, err)
 
 		assert.Equal(t, 8000, cfg.Port)
-		assert.Equal(t, "SCZANGBA5YHTNYVVV3C7CAZMTQDBJHJG6C34CIRY52VDRRW3DPQUTZY2", cfg.FriendbotSecret)
+		assert.Equal(t, "SCZANGBA5YHTNYVVV3C7CAZMTQDBJHJG6C34CIRY52VDRRW3DPQUTZY2", secrets.FriendbotSecret)
 		assert.Equal(t, "Test SDF Network ; September 2015", cfg.NetworkPassphrase)
 		assert.Equal(t, "10000.00", cfg.StartingBalance)
 	})
@@ -46,11 +46,11 @@ friendbot_secret = "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA"
 `), 0644)
 		require.NoError(t, err)
 
-		cfg, err := loadConfig(confFile, secretFile)
+		cfg, secrets, err := loadConfig(confFile, secretFile)
 		require.NoError(t, err)
 
 		assert.Equal(t, 8001, cfg.Port)
-		assert.Equal(t, "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA", cfg.FriendbotSecret)
+		assert.Equal(t, "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA", secrets.FriendbotSecret)
 		assert.Equal(t, "Test SDF Network ; September 2015", cfg.NetworkPassphrase)
 		assert.Equal(t, "5000.00", cfg.StartingBalance)
 	})
@@ -71,12 +71,11 @@ friendbot_secret = "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA"
 `), 0644)
 		require.NoError(t, err)
 
-		cfg, err := loadConfig(confFile, secretFile)
+		_, secrets, err := loadConfig(confFile, secretFile)
 		require.NoError(t, err)
 
-		assert.Equal(t, 8002, cfg.Port)
 		// Secret should come from the secret file, not the conf file
-		assert.Equal(t, "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA", cfg.FriendbotSecret)
+		assert.Equal(t, "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA", secrets.FriendbotSecret)
 	})
 
 	t.Run("error when no secret provided", func(t *testing.T) {
@@ -88,13 +87,13 @@ starting_balance = "10000.00"
 `), 0644)
 		require.NoError(t, err)
 
-		_, err = loadConfig(confFile, "")
+		_, _, err = loadConfig(confFile, "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "friendbot_secret is required")
 	})
 
 	t.Run("error when config file not found", func(t *testing.T) {
-		_, err := loadConfig("/nonexistent/path.cfg", "")
+		_, _, err := loadConfig("/nonexistent/path.cfg", "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "reading config file")
 	})
@@ -108,7 +107,7 @@ starting_balance = "10000.00"
 `), 0644)
 		require.NoError(t, err)
 
-		_, err = loadConfig(confFile, "/nonexistent/secret.cfg")
+		_, _, err = loadConfig(confFile, "/nonexistent/secret.cfg")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "reading secret file")
 	})

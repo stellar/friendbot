@@ -25,8 +25,8 @@ const (
 	serviceVersion = "1.0.0"
 )
 
-// ConfigFile represents the configuration loaded from --conf.
-type ConfigFile struct {
+// Config represents the configuration loaded from --conf.
+type Config struct {
 	Port                   int         `toml:"port" valid:"required"`
 	NetworkPassphrase      string      `toml:"network_passphrase" valid:"required"`
 	HorizonURL             string      `toml:"horizon_url" valid:"optional"`
@@ -41,32 +41,14 @@ type ConfigFile struct {
 	OtelEndpoint           string      `toml:"otel_endpoint" valid:"optional"`
 	OtelEnabled            bool        `toml:"otel_enabled" valid:"optional"`
 
-	// FriendbotSecret has been moved to SecretFile, but is still present here as
-	// an optional parameter for backwards compatibility with old cfg files.
+	// FriendbotSecret can be provided here for backwards compatibility,
+	// but prefer using a separate --secret file.
 	FriendbotSecret string `toml:"friendbot_secret" valid:"optional"`
 }
 
-// SecretFile represents the secret configuration loaded from --secret.
-type SecretFile struct {
+// Secrets represents the secret configuration loaded from --secret.
+type Secrets struct {
 	FriendbotSecret string `toml:"friendbot_secret" valid:"required"`
-}
-
-// Config is the combined configuration passed to the application.
-type Config struct {
-	Port                   int
-	FriendbotSecret        string
-	NetworkPassphrase      string
-	HorizonURL             string
-	RPCURL                 string
-	StartingBalance        string
-	TLS                    *config.TLS
-	NumMinions             int
-	BaseFee                int64
-	MinionBatchSize        int
-	SubmitTxRetriesAllowed int
-	UseCloudflareIP        bool
-	OtelEndpoint           string
-	OtelEnabled            bool
 }
 
 func main() {
@@ -87,7 +69,7 @@ func run(cmd *cobra.Command, args []string) {
 	secretPath := cmd.PersistentFlags().Lookup("secret").Value.String()
 	log.SetLevel(log.InfoLevel)
 
-	cfg, err := loadConfig(cfgPath, secretPath)
+	cfg, secrets, err := loadConfig(cfgPath, secretPath)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -101,7 +83,7 @@ func run(cmd *cobra.Command, args []string) {
 	log.Infof("Tracer initialized")
 	defer tracer()
 
-	fb, err := initFriendbot(cfg)
+	fb, err := initFriendbot(cfg, secrets)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -126,47 +108,32 @@ func run(cmd *cobra.Command, args []string) {
 // secret file. If secretPath is empty, the secret is expected to be in the
 // config file (backwards compatible). If secretPath is provided, it overrides
 // any secret in the config file.
-func loadConfig(cfgPath, secretPath string) (Config, error) {
-	var cfgFile ConfigFile
-	err := config.Read(cfgPath, &cfgFile)
+func loadConfig(cfgPath, secretPath string) (Config, Secrets, error) {
+	var cfg Config
+	err := config.Read(cfgPath, &cfg)
 	if err != nil {
-		return Config{}, errors.Wrap(err, "reading config file")
+		return Config{}, Secrets{}, errors.Wrap(err, "reading config file")
 	}
 
-	// Build the combined config from the config file
-	cfg := Config{
-		Port:                   cfgFile.Port,
-		NetworkPassphrase:      cfgFile.NetworkPassphrase,
-		HorizonURL:             cfgFile.HorizonURL,
-		RPCURL:                 cfgFile.RPCURL,
-		StartingBalance:        cfgFile.StartingBalance,
-		TLS:                    cfgFile.TLS,
-		NumMinions:             cfgFile.NumMinions,
-		BaseFee:                cfgFile.BaseFee,
-		MinionBatchSize:        cfgFile.MinionBatchSize,
-		SubmitTxRetriesAllowed: cfgFile.SubmitTxRetriesAllowed,
-		UseCloudflareIP:        cfgFile.UseCloudflareIP,
-		OtelEndpoint:           cfgFile.OtelEndpoint,
-		OtelEnabled:            cfgFile.OtelEnabled,
-		FriendbotSecret:        cfgFile.FriendbotSecret,
+	// Copy secret from config file into Secrets (for backwards compatibility)
+	secrets := Secrets{
+		FriendbotSecret: cfg.FriendbotSecret,
 	}
 
-	// If --secret is provided, load the secret from the separate file
+	// If --secret is provided, load the secret from the separate file and override
 	if secretPath != "" {
-		var secretFile SecretFile
-		err = config.Read(secretPath, &secretFile)
+		err = config.Read(secretPath, &secrets)
 		if err != nil {
-			return Config{}, errors.Wrap(err, "reading secret file")
+			return Config{}, Secrets{}, errors.Wrap(err, "reading secret file")
 		}
-		cfg.FriendbotSecret = secretFile.FriendbotSecret
 	}
 
 	// Validate that we have a secret
-	if cfg.FriendbotSecret == "" {
-		return Config{}, errors.New("friendbot_secret is required: provide it in --conf or use --secret")
+	if secrets.FriendbotSecret == "" {
+		return Config{}, Secrets{}, errors.New("friendbot_secret is required: provide it in --conf or use --secret")
 	}
 
-	return cfg, nil
+	return cfg, secrets, nil
 }
 
 func initRouter(cfg Config, fb *internal.Bot) *chi.Mux {
