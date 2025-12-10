@@ -46,8 +46,8 @@ type Config struct {
 // secrets for backwards compatibility with earlier versions that contained
 // secrets in the config file.
 type ConfigWithSecrets struct {
-	Config          `valid:"required"`
-	*Secrets         `valid:"optional"`
+	Config   `valid:"required"`
+	*Secrets `valid:"optional"`
 }
 
 // Secrets represents the secret configuration loaded from --secret.
