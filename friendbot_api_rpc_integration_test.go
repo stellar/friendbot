@@ -19,8 +19,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// rpcIntegrationTest holds the test fixtures for RPC integration tests.
+type rpcIntegrationTest struct {
+	Router            http.Handler
+	RPCClient         internal.NetworkClient
+	NetworkPassphrase string
+	StartingBalance   string
+}
+
 // Setup creates running instance of friendbot from current code and requires an external instance of RPC that has been configured with its own separate instance of friendbot to support funding accounts. These tests utilize that to fund new minion and bot accounts on target network used by this local friendbot instance being tested.
-func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient, string, string) {
+func setupRPCIntegration(t *testing.T) rpcIntegrationTest {
 	t.Helper()
 
 	rpcURL := os.Getenv("RPC_URL")
@@ -72,7 +80,12 @@ func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient, st
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
-	return router, rpcClient, networkPassphrase, startingBalance
+	return rpcIntegrationTest{
+		Router:            router,
+		RPCClient:         rpcClient,
+		NetworkPassphrase: networkPassphrase,
+		StartingBalance:   startingBalance,
+	}
 }
 
 // getBalance queries the native XLM balance via GetAccountDetails.
@@ -90,7 +103,7 @@ func getBalance(t *testing.T, rpcClient internal.NetworkClient, address string) 
 }
 
 func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
-	router, rpcClient, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -100,7 +113,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/?addr="+recipientAddress, nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
@@ -116,7 +129,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Check that the recipient account has the expected balance
-	accountDetails, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	// Balance is returned as XLM string format
@@ -126,7 +139,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
-	router, rpcClient, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -140,7 +153,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
@@ -156,7 +169,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Check that the recipient account has the expected balance
-	accountDetails, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	// Balance is returned as XLM string format
@@ -166,12 +179,12 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_MissingAddressParameter(t *testing.T) {
-	router, _, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
@@ -191,14 +204,14 @@ func TestFriendbotRPCIntegration_MissingAddressParameter(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_InvalidAddress(t *testing.T) {
-	router, _, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	invalidAddress := "invalid_address"
 
 	req := httptest.NewRequest("GET", "/?addr="+invalidAddress, nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
@@ -218,7 +231,7 @@ func TestFriendbotRPCIntegration_InvalidAddress(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
-	router, rpcClient, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -228,10 +241,10 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 	// First funding attempt
 	req := httptest.NewRequest("GET", "/?addr="+recipientAddress, nil)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	// Check that the recipient account has the expected balance after first funding
-	accountDetails, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	balance := accountDetails.Balance
@@ -241,12 +254,12 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 	// Second funding attempt - should fail (either with account already funded or transaction error)
 	req2 := httptest.NewRequest("GET", "/?addr="+recipientAddress, nil)
 	w2 := httptest.NewRecorder()
-	router.ServeHTTP(w2, req2)
+	tt.Router.ServeHTTP(w2, req2)
 
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
 
 	// Check that the balance hasn't changed after the failed funding attempt
-	accountDetails2, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails2, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	balance2 := accountDetails2.Balance
@@ -264,7 +277,7 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
-	router, rpcClient, networkPassphrase, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// Generate random recipient address
 	recipientKeypair, err := keypair.Random()
@@ -274,12 +287,12 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 	// First funding attempt
 	req := httptest.NewRequest("GET", "/?addr="+recipientAddress, nil)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
 
 	// Check that the recipient account has the expected balance after first funding
-	accountDetails, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	balance := accountDetails.Balance
@@ -303,16 +316,16 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	bumpSeqTx, err = bumpSeqTx.Sign(networkPassphrase, recipientKeypair)
+	bumpSeqTx, err = bumpSeqTx.Sign(tt.NetworkPassphrase, recipientKeypair)
 	require.NoError(t, err)
 	bumpSeqTxXDR, err := bumpSeqTx.Base64()
 	require.NoError(t, err)
 
-	err = rpcClient.SubmitTransaction(bumpSeqTxXDR)
+	err = tt.RPCClient.SubmitTransaction(bumpSeqTxXDR)
 	require.NoError(t, err)
 
 	// Check balance after bump seq tx - should be slightly lower due to fees
-	accountDetails2, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails2, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	balance2 := accountDetails2.Balance
@@ -321,7 +334,7 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 	// Second funding attempt - should succeed since balance is now below starting balance
 	req2 := httptest.NewRequest("GET", "/?addr="+recipientAddress, nil)
 	w2 := httptest.NewRecorder()
-	router.ServeHTTP(w2, req2)
+	tt.Router.ServeHTTP(w2, req2)
 
 	assert.Equal(t, http.StatusOK, w2.Code)
 	body := w2.Body.String()
@@ -338,7 +351,7 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 
 	// Check that the recipient account received another starting balance payment
 	// (friendbot sends the full starting balance, not just the difference)
-	accountDetails3, err := rpcClient.GetAccountDetails(recipientAddress)
+	accountDetails3, err := tt.RPCClient.GetAccountDetails(recipientAddress)
 	require.NoError(t, err)
 
 	balance3 := accountDetails3.Balance
@@ -348,12 +361,12 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 }
 
 func TestFriendbotRPCIntegration_404NotFound(t *testing.T) {
-	router, _, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
@@ -371,19 +384,19 @@ func TestFriendbotRPCIntegration_404NotFound(t *testing.T) {
 // TestFriendbotRPCIntegration_ContractFunding_GET tests funding a contract address (C address)
 // using the native Stellar Asset Contract (SAC) transfer function.
 func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
-	router, rpcClient, _, startingBalance := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// Use a well-known contract address (all zeros with valid checksum)
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	// Get balance before funding
-	balanceBefore := getBalance(t, rpcClient, contractAddress)
+	balanceBefore := getBalance(t, tt.RPCClient, contractAddress)
 	t.Logf("Contract balance before funding: %d stroops", balanceBefore)
 
 	req := httptest.NewRequest("GET", "/?addr="+url.QueryEscape(contractAddress), nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	// The request should succeed (200 OK)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -401,30 +414,30 @@ func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Get balance after funding and verify it increased by the starting balance
-	balanceAfter := getBalance(t, rpcClient, contractAddress)
+	balanceAfter := getBalance(t, tt.RPCClient, contractAddress)
 	t.Logf("Contract balance after funding: %d stroops", balanceAfter)
 
 	// Convert starting balance to stroops
-	expectedIncreaseStroops, err := amount.ParseInt64(startingBalance)
+	expectedIncreaseStroops, err := amount.ParseInt64(tt.StartingBalance)
 	require.NoError(t, err)
 
 	actualIncrease := balanceAfter - balanceBefore
 	assert.Equal(t, expectedIncreaseStroops, actualIncrease,
 		"Contract balance should have increased by %s XLM (%d stroops)",
-		startingBalance, expectedIncreaseStroops)
+		tt.StartingBalance, expectedIncreaseStroops)
 
 	t.Logf("Successfully funded contract %s with transaction hash %s", contractAddress, result.Hash)
 }
 
 // TestFriendbotRPCIntegration_ContractFunding_POST tests funding a contract address using POST method.
 func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
-	router, rpcClient, _, startingBalance := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// Use a well-known contract address (all zeros with valid checksum)
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	// Get balance before funding
-	balanceBefore := getBalance(t, rpcClient, contractAddress)
+	balanceBefore := getBalance(t, tt.RPCClient, contractAddress)
 	t.Logf("Contract balance before funding: %d stroops", balanceBefore)
 
 	formData := url.Values{}
@@ -434,7 +447,7 @@ func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	// The request should succeed (200 OK)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -452,17 +465,17 @@ func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Get balance after funding and verify it increased by the starting balance
-	balanceAfter := getBalance(t, rpcClient, contractAddress)
+	balanceAfter := getBalance(t, tt.RPCClient, contractAddress)
 	t.Logf("Contract balance after funding: %d stroops", balanceAfter)
 
 	// Convert starting balance to stroops
-	expectedIncreaseStroops, err := amount.ParseInt64(startingBalance)
+	expectedIncreaseStroops, err := amount.ParseInt64(tt.StartingBalance)
 	require.NoError(t, err)
 
 	actualIncrease := balanceAfter - balanceBefore
 	assert.Equal(t, expectedIncreaseStroops, actualIncrease,
 		"Contract balance should have increased by %s XLM (%d stroops)",
-		startingBalance, expectedIncreaseStroops)
+		tt.StartingBalance, expectedIncreaseStroops)
 
 	t.Logf("Successfully funded contract %s with transaction hash %s", contractAddress, result.Hash)
 }
@@ -470,7 +483,7 @@ func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 // TestFriendbotRPCIntegration_InvalidContractAddress tests that an invalid contract address
 // (that looks like a C address but is malformed) returns an error.
 func TestFriendbotRPCIntegration_InvalidContractAddress(t *testing.T) {
-	router, _, _, _ := setupRPCIntegration(t)
+	tt := setupRPCIntegration(t)
 
 	// An invalid C address (wrong checksum)
 	invalidContractAddress := "CINVALIDCONTRACTADDRESS12345"
@@ -478,7 +491,7 @@ func TestFriendbotRPCIntegration_InvalidContractAddress(t *testing.T) {
 	req := httptest.NewRequest("GET", "/?addr="+url.QueryEscape(invalidContractAddress), nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	tt.Router.ServeHTTP(w, req)
 
 	// Should return 400 Bad Request with address validation error
 	assert.Equal(t, http.StatusBadRequest, w.Code)
