@@ -77,7 +77,7 @@ func setupRPCIntegration(t *testing.T) (http.Handler, internal.NetworkClient, st
 
 // getBalance queries the native XLM balance via GetAccountDetails.
 // Returns the balance in stroops.
-func getBalance(t *testing.T, rpcClient internal.NetworkClient, address string) int64 {
+func getBalance(t *testing.T, rpcClient internal.NetworkClient, address string) int64 { //nolint:unparam
 	t.Helper()
 
 	details, err := rpcClient.GetAccountDetails(address)
