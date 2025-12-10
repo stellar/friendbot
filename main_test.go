@@ -19,7 +19,7 @@ port = 8000
 friendbot_secret = "SCZANGBA5YHTNYVVV3C7CAZMTQDBJHJG6C34CIRY52VDRRW3DPQUTZY2"
 network_passphrase = "Test SDF Network ; September 2015"
 starting_balance = "10000.00"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		cfg, secrets, err := loadConfig(confFile, "")
@@ -37,13 +37,13 @@ starting_balance = "10000.00"
 port = 8001
 network_passphrase = "Test SDF Network ; September 2015"
 starting_balance = "5000.00"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		secretFile := filepath.Join(tmpDir, "secret.cfg")
 		err = os.WriteFile(secretFile, []byte(`
 friendbot_secret = "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		cfg, secrets, err := loadConfig(confFile, secretFile)
@@ -62,13 +62,13 @@ port = 8002
 friendbot_secret = "SCZANGBA5YHTNYVVV3C7CAZMTQDBJHJG6C34CIRY52VDRRW3DPQUTZY2"
 network_passphrase = "Test SDF Network ; September 2015"
 starting_balance = "10000.00"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		secretFile := filepath.Join(tmpDir, "override_secret.cfg")
 		err = os.WriteFile(secretFile, []byte(`
 friendbot_secret = "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		_, secrets, err := loadConfig(confFile, secretFile)
@@ -84,7 +84,7 @@ friendbot_secret = "SBKGCMBY56GZQ4ZTQ4BXDPXG3MFAMZ6FMZQHGC3APMZ6AXRY5VZL7FRA"
 port = 8003
 network_passphrase = "Test SDF Network ; September 2015"
 starting_balance = "10000.00"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		_, _, err = loadConfig(confFile, "")
@@ -104,7 +104,7 @@ starting_balance = "10000.00"
 port = 8004
 network_passphrase = "Test SDF Network ; September 2015"
 starting_balance = "10000.00"
-`), 0644)
+`), 0600)
 		require.NoError(t, err)
 
 		_, _, err = loadConfig(confFile, "/nonexistent/secret.cfg")
