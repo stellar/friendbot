@@ -25,10 +25,9 @@ const (
 	serviceVersion = "1.0.0"
 )
 
-// Config represents the configuration of a friendbot server
+// Config represents the non-secret configuration.
 type Config struct {
 	Port                   int         `toml:"port" valid:"required"`
-	FriendbotSecret        string      `toml:"friendbot_secret" valid:"required"`
 	NetworkPassphrase      string      `toml:"network_passphrase" valid:"required"`
 	HorizonURL             string      `toml:"horizon_url" valid:"optional"`
 	RPCURL                 string      `toml:"rpc_url" valid:"optional"`
@@ -43,6 +42,19 @@ type Config struct {
 	OtelEnabled            bool        `toml:"otel_enabled" valid:"optional"`
 }
 
+// ConfigWithSecrets is used for parsing --conf files that may contain the
+// secrets for backwards compatibility with earlier versions that contained
+// secrets in the config file.
+type ConfigWithSecrets struct {
+	Config   `valid:"required"`
+	*Secrets `valid:"optional"`
+}
+
+// Secrets represents the secret configuration loaded from --secret.
+type Secrets struct {
+	FriendbotSecret string `toml:"friendbot_secret" valid:"required"`
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "friendbot",
@@ -52,24 +64,18 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().String("conf", "./friendbot.cfg", "config file path")
+	rootCmd.PersistentFlags().String("secret", "", "secret config file path (optional, overrides friendbot_secret from conf)")
 	rootCmd.Execute()
 }
 
 func run(cmd *cobra.Command, args []string) {
-	var (
-		cfg     Config
-		cfgPath = cmd.PersistentFlags().Lookup("conf").Value.String()
-	)
+	cfgPath := cmd.PersistentFlags().Lookup("conf").Value.String()
+	secretPath := cmd.PersistentFlags().Lookup("secret").Value.String()
 	log.SetLevel(log.InfoLevel)
 
-	err := config.Read(cfgPath, &cfg)
+	cfg, secrets, err := loadConfig(cfgPath, secretPath)
 	if err != nil {
-		switch cause := errors.Cause(err).(type) {
-		case *config.InvalidConfigError:
-			log.Error("config file: ", cause)
-		default:
-			log.Error(err)
-		}
+		log.Error(err)
 		os.Exit(1)
 	}
 
@@ -81,7 +87,7 @@ func run(cmd *cobra.Command, args []string) {
 	log.Infof("Tracer initialized")
 	defer tracer()
 
-	fb, err := initFriendbot(cfg)
+	fb, err := initFriendbot(cfg, secrets)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -100,6 +106,40 @@ func run(cmd *cobra.Command, args []string) {
 			log.Infof("listening on %s", addr)
 		},
 	})
+}
+
+// loadConfig loads configuration from the config file and optionally a separate
+// secret file. If secretPath is empty, the secret is expected to be in the
+// config file (backwards compatible). If secretPath is provided, it overrides
+// any secret in the config file.
+func loadConfig(cfgPath, secretPath string) (Config, Secrets, error) {
+	var cfgWithSecrets ConfigWithSecrets
+	err := config.Read(cfgPath, &cfgWithSecrets)
+	if err != nil {
+		return Config{}, Secrets{}, errors.Wrap(err, "reading config file")
+	}
+
+	// Extract config and secret separately
+	cfg := cfgWithSecrets.Config
+	secrets := Secrets{}
+	if cfgWithSecrets.Secrets != nil {
+		secrets = *cfgWithSecrets.Secrets
+	}
+
+	// If --secret is provided, load the secret from the separate file and override
+	if secretPath != "" {
+		err = config.Read(secretPath, &secrets)
+		if err != nil {
+			return Config{}, Secrets{}, errors.Wrap(err, "reading secret file")
+		}
+	}
+
+	// Validate that we have a secret
+	if secrets.FriendbotSecret == "" {
+		return Config{}, Secrets{}, errors.New("friendbot_secret is required: provide it in --conf or use --secret")
+	}
+
+	return cfg, secrets, nil
 }
 
 func initRouter(cfg Config, fb *internal.Bot) *chi.Mux {
