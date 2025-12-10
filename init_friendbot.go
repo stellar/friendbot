@@ -15,20 +15,20 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-func initFriendbot(cfg Config) (*internal.Bot, error) {
-	if cfg.FriendbotSecret == "" || cfg.NetworkPassphrase == "" || cfg.StartingBalance == "" || cfg.NumMinions < 0 {
+func initFriendbot(cfg Config, secrets Secrets) (*internal.Bot, error) {
+	if secrets.FriendbotSecret == "" || cfg.NetworkPassphrase == "" || cfg.StartingBalance == "" || cfg.NumMinions < 0 {
 		return nil, errors.New("invalid input param(s)")
 	}
 
 	// Guarantee that friendbotSecret is a seed, if not blank.
-	strkey.MustDecode(strkey.VersionByteSeed, cfg.FriendbotSecret)
+	strkey.MustDecode(strkey.VersionByteSeed, secrets.FriendbotSecret)
 
 	networkClient, err := newNetworkClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	botKP, err := keypair.Parse(cfg.FriendbotSecret)
+	botKP, err := keypair.Parse(secrets.FriendbotSecret)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing bot keypair")
 	}
