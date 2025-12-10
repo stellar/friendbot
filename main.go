@@ -81,8 +81,7 @@ func run(cmd *cobra.Command, args []string) {
 	log.Infof("Tracer initialized")
 	defer tracer()
 
-	fb, err := initFriendbot(cfg.FriendbotSecret, cfg.NetworkPassphrase, cfg.HorizonURL, cfg.RPCURL, cfg.StartingBalance,
-		cfg.NumMinions, cfg.BaseFee, cfg.MinionBatchSize, cfg.SubmitTxRetriesAllowed)
+	fb, err := initFriendbot(cfg)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
