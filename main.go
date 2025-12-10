@@ -25,7 +25,7 @@ const (
 	serviceVersion = "1.0.0"
 )
 
-// Config represents the configuration loaded from --conf.
+// Config represents the non-secret configuration.
 type Config struct {
 	Port                   int         `toml:"port" valid:"required"`
 	NetworkPassphrase      string      `toml:"network_passphrase" valid:"required"`
@@ -40,10 +40,14 @@ type Config struct {
 	UseCloudflareIP        bool        `toml:"use_cloudflare_ip" valid:"optional"`
 	OtelEndpoint           string      `toml:"otel_endpoint" valid:"optional"`
 	OtelEnabled            bool        `toml:"otel_enabled" valid:"optional"`
+}
 
-	// FriendbotSecret can be provided here for backwards compatibility,
-	// but prefer using a separate --secret file.
-	FriendbotSecret string `toml:"friendbot_secret" valid:"optional"`
+// ConfigWithSecrets is used for parsing --conf files that may contain the
+// secrets for backwards compatibility with earlier versions that contained
+// secrets in the config file.
+type ConfigWithSecrets struct {
+	Config          `valid:"required"`
+	*Secrets         `valid:"optional"`
 }
 
 // Secrets represents the secret configuration loaded from --secret.
@@ -109,15 +113,17 @@ func run(cmd *cobra.Command, args []string) {
 // config file (backwards compatible). If secretPath is provided, it overrides
 // any secret in the config file.
 func loadConfig(cfgPath, secretPath string) (Config, Secrets, error) {
-	var cfg Config
-	err := config.Read(cfgPath, &cfg)
+	var cfgWithSecrets ConfigWithSecrets
+	err := config.Read(cfgPath, &cfgWithSecrets)
 	if err != nil {
 		return Config{}, Secrets{}, errors.Wrap(err, "reading config file")
 	}
 
-	// Copy secret from config file into Secrets (for backwards compatibility)
-	secrets := Secrets{
-		FriendbotSecret: cfg.FriendbotSecret,
+	// Extract config and secret separately
+	cfg := cfgWithSecrets.Config
+	secrets := Secrets{}
+	if cfgWithSecrets.Secrets != nil {
+		secrets = *cfgWithSecrets.Secrets
 	}
 
 	// If --secret is provided, load the secret from the separate file and override
