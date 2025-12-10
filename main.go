@@ -25,10 +25,9 @@ const (
 	serviceVersion = "1.0.0"
 )
 
-// Config represents the configuration of a friendbot server
-type Config struct {
+// ConfigFile represents the non-secret configuration loaded from --conf.
+type ConfigFile struct {
 	Port                   int         `toml:"port" valid:"required"`
-	FriendbotSecret        string      `toml:"friendbot_secret" valid:"required"`
 	NetworkPassphrase      string      `toml:"network_passphrase" valid:"required"`
 	HorizonURL             string      `toml:"horizon_url" valid:"optional"`
 	RPCURL                 string      `toml:"rpc_url" valid:"optional"`
@@ -43,6 +42,17 @@ type Config struct {
 	OtelEnabled            bool        `toml:"otel_enabled" valid:"optional"`
 }
 
+// SecretFile represents the secret configuration loaded from --secret.
+type SecretFile struct {
+	FriendbotSecret string `toml:"friendbot_secret" valid:"required"`
+}
+
+// Config is the combined configuration from ConfigFile and SecretFile.
+type Config struct {
+	ConfigFile
+	SecretFile
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "friendbot",
@@ -52,17 +62,19 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().String("conf", "./friendbot.cfg", "config file path")
+	rootCmd.PersistentFlags().String("secret", "", "secret config file path (optional, overrides friendbot_secret from conf)")
 	rootCmd.Execute()
 }
 
 func run(cmd *cobra.Command, args []string) {
 	var (
-		cfg     Config
-		cfgPath = cmd.PersistentFlags().Lookup("conf").Value.String()
+		cfg        Config
+		cfgPath    = cmd.PersistentFlags().Lookup("conf").Value.String()
+		secretPath = cmd.PersistentFlags().Lookup("secret").Value.String()
 	)
 	log.SetLevel(log.InfoLevel)
 
-	err := config.Read(cfgPath, &cfg)
+	err := config.Read(cfgPath, &cfg.ConfigFile)
 	if err != nil {
 		switch cause := errors.Cause(err).(type) {
 		case *config.InvalidConfigError:
@@ -70,6 +82,28 @@ func run(cmd *cobra.Command, args []string) {
 		default:
 			log.Error(err)
 		}
+		os.Exit(1)
+	}
+
+	// Load the secret from --secret if provided, otherwise from --conf for backwards compatibility
+	secretFile := secretPath
+	if secretFile == "" {
+		secretFile = cfgPath
+	}
+	err = config.Read(secretFile, &cfg.SecretFile)
+	if err != nil {
+		switch cause := errors.Cause(err).(type) {
+		case *config.InvalidConfigError:
+			log.Error("secret config file: ", cause)
+		default:
+			log.Error(err)
+		}
+		os.Exit(1)
+	}
+
+	// Validate that we have a secret from one of the two sources
+	if cfg.FriendbotSecret == "" {
+		log.Error("friendbot_secret is required: provide it in --conf or use --secret")
 		os.Exit(1)
 	}
 
