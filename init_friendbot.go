@@ -57,7 +57,11 @@ func initFriendbot(cfg Config, secrets Secrets) (*internal.Bot, error) {
 		return nil, errors.Wrap(err, "creating minion accounts")
 	}
 	log.Printf("Adding %d minions to friendbot", len(minions))
-	return &internal.Bot{Minions: minions, NetworkClient: networkClient}, nil
+	return &internal.Bot{
+		Minions:               minions,
+		NetworkClient:         networkClient,
+		FundContractAddresses: cfg.FundContractAddresses,
+	}, nil
 }
 
 func newNetworkClient(cfg Config) (internal.NetworkClient, error) {

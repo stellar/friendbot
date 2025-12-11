@@ -76,7 +76,7 @@ func setupRPCIntegration(t *testing.T) rpcIntegrationTest {
 		BaseFee:              baseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: rpcClient}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: rpcClient, FundContractAddresses: true}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)

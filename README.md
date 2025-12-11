@@ -140,9 +140,13 @@ The service uses a TOML configuration file. Here are the key settings:
 | `base_fee` | Base fee for transactions | `100000` |
 | `minion_batch_size` | Batch size for minion operations | `50` |
 | `submit_tx_retries_allowed` | Number of retry attempts for failed transactions | `5` |
+| `fund_contract_addresses` | Enable funding contract addresses (C addresses) | `false` |
 
 > [!NOTE]
 > You must configure either `horizon_url` or `rpc_url`, but not both. Friendbot can interact with the Stellar network through either Horizon (the traditional REST API) or RPC (the newer JSON-RPC API).
+
+> [!NOTE]
+> The `fund_contract_addresses` option requires `rpc_url` to be configured. Contract address funding is not supported when using `horizon_url`.
 
 
 ## Development

@@ -9,10 +9,11 @@ import (
 // Bot represents the friendbot subsystem and primarily delegates work
 // to its Minions.
 type Bot struct {
-	Minions         []Minion
-	NetworkClient   NetworkClient
-	nextMinionIndex int
-	indexMux        sync.Mutex
+	Minions               []Minion
+	NetworkClient         NetworkClient
+	FundContractAddresses bool
+	nextMinionIndex       int
+	indexMux              sync.Mutex
 }
 
 // SubmitResult is the result from the asynchronous tx submission.
@@ -35,8 +36,8 @@ func (bot *Bot) Pay(ctx context.Context, destAddress string) (*TransactionResult
 	return maybeSubmitResult.maybeTransactionSuccess, maybeSubmitResult.maybeErr
 }
 
-// SupportsContractAddresses returns true if the bot's network client supports
-// funding contract addresses (C addresses).
+// SupportsContractAddresses returns true if the bot is configured to fund
+// contract addresses (C addresses) and the network client supports it.
 func (bot *Bot) SupportsContractAddresses() bool {
-	return bot.NetworkClient.SupportsContractAddresses()
+	return bot.FundContractAddresses && bot.NetworkClient.SupportsContractAddresses()
 }
