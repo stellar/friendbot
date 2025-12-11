@@ -92,6 +92,9 @@ var _ internal.NetworkError = (*NetworkError)(nil)
 // NetworkClient wraps an RPC client and implements the internal.NetworkClient interface.
 type NetworkClient struct {
 	client *rpcclient.Client
+	// TODO: Remove this field once rpcclient.Client exposes URL().
+	// See https://github.com/stellar/go-stellar-sdk/issues/5885
+	url string
 }
 
 // Ensure NetworkClient implements the internal.NetworkClient interface.
@@ -100,7 +103,12 @@ var _ internal.NetworkClient = (*NetworkClient)(nil)
 // NewNetworkClient creates a new NetworkClient wrapping the given RPC client.
 func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
 	client := rpcclient.NewClient(url, httpClient)
-	return &NetworkClient{client: client}
+	return &NetworkClient{client: client, url: url}
+}
+
+// URL returns the RPC URL used by this client.
+func (r *NetworkClient) URL() string {
+	return r.url
 }
 
 // SubmitTransaction submits a transaction using the underlying RPC client.
