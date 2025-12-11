@@ -18,6 +18,22 @@ func TestNewNetworkClient(t *testing.T) {
 	assert.Equal(t, mockClient, client.client)
 }
 
+func TestNetworkClient_URL(t *testing.T) {
+	t.Run("returns URL for real client", func(t *testing.T) {
+		realClient := &horizonclient.Client{
+			HorizonURL: "https://horizon.stellar.org",
+		}
+		client := NewNetworkClient(realClient)
+		assert.Equal(t, "https://horizon.stellar.org", client.URL())
+	})
+
+	t.Run("returns empty string for mock client", func(t *testing.T) {
+		mockClient := &horizonclient.MockClient{}
+		client := NewNetworkClient(mockClient)
+		assert.Equal(t, "", client.URL())
+	})
+}
+
 func TestNetworkError_IsNotFound(t *testing.T) {
 	response := &http.Response{StatusCode: http.StatusNotFound}
 	horizonErr := &horizonclient.Error{
