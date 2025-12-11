@@ -6,6 +6,7 @@ import (
 
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/horizonnetworkclient"
+	"github.com/stellar/friendbot/internal/rpcnetworkclient"
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/protocols/horizon"
@@ -91,4 +92,49 @@ func TestInitFriendbot_createMinionAccounts_timeoutError(t *testing.T) {
 	assert.Equal(t, 150, len(createdMinions))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "after retrying 5 times: submitting create accounts tx:")
+}
+
+func TestNewNetworkClient(t *testing.T) {
+	t.Run("error when both URLs are set", func(t *testing.T) {
+		cfg := Config{
+			HorizonURL: "https://horizon.stellar.org",
+			RPCURL:     "https://rpc.stellar.org",
+		}
+		client, err := newNetworkClient(cfg)
+		assert.Nil(t, client)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "only one of horizon_url or rpc_url should be provided")
+	})
+
+	t.Run("error when neither URL is set", func(t *testing.T) {
+		cfg := Config{}
+		client, err := newNetworkClient(cfg)
+		assert.Nil(t, client)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "either horizon_url or rpc_url must be provided")
+	})
+
+	t.Run("returns horizon client when only HorizonURL is set", func(t *testing.T) {
+		cfg := Config{
+			HorizonURL: "https://horizon.stellar.org",
+		}
+		client, err := newNetworkClient(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, client)
+		horizonClient, ok := client.(*horizonnetworkclient.NetworkClient)
+		assert.True(t, ok, "expected horizon network client")
+		assert.Equal(t, "https://horizon.stellar.org", horizonClient.URL())
+	})
+
+	t.Run("returns RPC client when only RPCURL is set", func(t *testing.T) {
+		cfg := Config{
+			RPCURL: "https://rpc.stellar.org",
+		}
+		client, err := newNetworkClient(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, client)
+		rpcClient, ok := client.(*rpcnetworkclient.NetworkClient)
+		assert.True(t, ok, "expected RPC network client")
+		assert.Equal(t, "https://rpc.stellar.org", rpcClient.URL())
+	})
 }

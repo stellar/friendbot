@@ -19,6 +19,11 @@ func TestNewNetworkClient(t *testing.T) {
 	assert.NotNil(t, client.client)
 }
 
+func TestNetworkClient_URL(t *testing.T) {
+	client := NewNetworkClient("https://rpc.stellar.org", nil)
+	assert.Equal(t, "https://rpc.stellar.org", client.URL())
+}
+
 func TestNetworkError_IsNotFound(t *testing.T) {
 	// Test not found error
 	networkErr := &NetworkError{err: errors.New("account not found"), notFound: true}
