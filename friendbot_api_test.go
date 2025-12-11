@@ -449,7 +449,7 @@ func TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation(t *testing.
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient, FundContractAddresses: true}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -517,7 +517,7 @@ func TestFriendbotAPI_ContractFunding_POST(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient, FundContractAddresses: true}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -585,7 +585,7 @@ func TestFriendbotAPI_ContractFunding_SimulationError(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient, FundContractAddresses: true}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -656,7 +656,7 @@ func TestFriendbotAPI_ContractChecksBalance(t *testing.T) {
 		BaseFee:              txnbuild.MinBaseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: mockNetworkClient, FundContractAddresses: true}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
