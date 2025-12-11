@@ -41,11 +41,6 @@ type AccountDetails struct {
 	Balance  string
 }
 
-// ParseSequenceNumber returns the sequence number as int64.
-func (a *AccountDetails) ParseSequenceNumber() (int64, error) {
-	return a.Sequence, nil
-}
-
 // SimulateTransactionResult contains the result of simulating a transaction.
 type SimulateTransactionResult struct {
 	// TransactionDataXDR is the SorobanTransactionData XDR in base64.
