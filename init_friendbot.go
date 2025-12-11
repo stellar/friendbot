@@ -71,7 +71,7 @@ func newNetworkClient(cfg Config) (internal.NetworkClient, error) {
 	if cfg.RPCURL != "" {
 		return rpcnetworkclient.NewNetworkClient(cfg.RPCURL, http.DefaultClient, cfg.NetworkPassphrase), nil
 	}
-	if cfg.HorizonURL == "" {
+	if cfg.HorizonURL != "" {
 		return horizonnetworkclient.NewNetworkClient(&horizonclient.Client{
 			HorizonURL: cfg.HorizonURL,
 			HTTP:       http.DefaultClient,

@@ -77,6 +77,15 @@ func NewNetworkClient(client horizonclient.ClientInterface) *NetworkClient {
 	return &NetworkClient{client: client}
 }
 
+// URL returns the Horizon URL if the underlying client is a *horizonclient.Client.
+// Returns empty string for mock clients or other implementations.
+func (h *NetworkClient) URL() string {
+	if c, ok := h.client.(*horizonclient.Client); ok {
+		return c.HorizonURL
+	}
+	return ""
+}
+
 // SubmitTransaction submits a transaction using the underlying horizon client.
 func (h *NetworkClient) SubmitTransaction(txXDR string) error {
 	_, err := h.client.SubmitTransactionXDR(txXDR)

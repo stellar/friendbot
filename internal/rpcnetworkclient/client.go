@@ -99,6 +99,9 @@ const zeroAddress = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
 type NetworkClient struct {
 	client      *rpcclient.Client
 	nativeSACID xdr.Hash
+	// TODO: Remove this field once rpcclient.Client exposes URL().
+	// See https://github.com/stellar/go-stellar-sdk/issues/5885
+	url string
 }
 
 // Ensure NetworkClient implements the internal.NetworkClient interface.
@@ -115,7 +118,13 @@ func NewNetworkClient(url string, httpClient *http.Client, networkPassphrase str
 	return &NetworkClient{
 		client:      client,
 		nativeSACID: nativeSACID,
+		url:         url,
 	}
+}
+
+// URL returns the RPC URL used by this client.
+func (r *NetworkClient) URL() string {
+	return r.url
 }
 
 // SubmitTransaction submits a transaction using the underlying RPC client.
