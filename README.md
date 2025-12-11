@@ -189,6 +189,14 @@ starting_balance = "10000.00"
 > [!NOTE]
 > You must configure either `horizon_url` or `rpc_url`, but not both. Friendbot can interact with the Stellar network through either Horizon (the traditional REST API) or RPC (the newer JSON-RPC API).
 
+#### Secret Settings
+
+Settings available in the `--secret` file:
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| `friendbot_secret` | Secret key for the friendbot account | Yes |
+
 
 ## Development
 
