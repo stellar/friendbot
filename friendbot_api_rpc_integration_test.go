@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +16,7 @@ import (
 	"github.com/stellar/friendbot/internal/testutil"
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/txnbuild"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -387,7 +390,7 @@ func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
 	tt := setupRPCIntegration(t)
 
 	// Pick any contract to fund
-	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
+	contractAddress := randomContractAddress(t)
 
 	// Get balance before funding
 	balanceBefore := getBalance(t, tt.RPCClient, contractAddress)
@@ -434,7 +437,7 @@ func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 	tt := setupRPCIntegration(t)
 
 	// Pick any contract to fund
-	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
+	contractAddress := randomContractAddress(t)
 
 	// Get balance before funding
 	balanceBefore := getBalance(t, tt.RPCClient, contractAddress)
@@ -499,4 +502,14 @@ func TestFriendbotRPCIntegration_InvalidContractAddress(t *testing.T) {
 	body := w.Body.String()
 	assert.Contains(t, body, `"invalid_field"`)
 	assert.Contains(t, body, `"addr"`)
+}
+
+func randomContractAddress(t testing.TB) string {
+	t.Helper()
+	var contractIdHash [32]byte
+	_, err := io.ReadFull(rand.Reader, contractIdHash[:])
+	require.NoError(t, err)
+	contractAddress, err := strkey.Encode(strkey.VersionByteContract, contractIdHash[:])
+	require.NoError(t, err)
+	return contractAddress
 }
