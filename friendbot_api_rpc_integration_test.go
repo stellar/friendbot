@@ -386,7 +386,7 @@ func TestFriendbotRPCIntegration_404NotFound(t *testing.T) {
 func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
 	tt := setupRPCIntegration(t)
 
-	// Use a well-known contract address (all zeros with valid checksum)
+	// Pick any contract to fund
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	// Get balance before funding
@@ -433,7 +433,7 @@ func TestFriendbotRPCIntegration_ContractFunding_GET(t *testing.T) {
 func TestFriendbotRPCIntegration_ContractFunding_POST(t *testing.T) {
 	tt := setupRPCIntegration(t)
 
-	// Use a well-known contract address (all zeros with valid checksum)
+	// Pick any contract to fund
 	contractAddress := "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
 
 	// Get balance before funding
