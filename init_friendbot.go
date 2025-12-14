@@ -57,6 +57,12 @@ func initFriendbot(cfg Config, secrets Secrets) (*internal.Bot, error) {
 		return nil, errors.Wrap(err, "creating minion accounts")
 	}
 	log.Printf("Adding %d minions to friendbot", len(minions))
+
+	// Validate that contract address funding is only enabled when using RPC
+	if cfg.FundContractAddresses && !networkClient.SupportsContractAddresses() {
+		return nil, errors.New("fund_contract_addresses is enabled but the network client does not support contract addresses; configure rpc_url instead of horizon_url to fund contract addresses")
+	}
+
 	return &internal.Bot{
 		Minions:               minions,
 		NetworkClient:         networkClient,
