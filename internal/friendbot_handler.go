@@ -108,7 +108,7 @@ func (handler *FriendbotHandler) loadAddress(ctx context.Context, r *http.Reques
 	// Check if it's a valid C address (contract)
 	if strkey.IsValidContractAddress(unescaped) {
 		if !handler.Friendbot.SupportsContractAddresses() {
-			err = errors.New("contract addresses are not supported, configure rpc_url to fund contract addresses")
+			err = errors.New("contract addresses are not supported or enabled")
 			span.SetStatus(codes.Error, err.Error())
 			return unescaped, err
 		}
