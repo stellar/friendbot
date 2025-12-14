@@ -78,7 +78,7 @@ func (e *NetworkError) DiagnosticEventStrings() []string {
 
 // Error implements the error interface.
 func (e *NetworkError) Error() string {
-	return e.err.Error()
+	return fmt.Sprintf("%s, result_xdr: %s, diagnostic_events_xdr: %v", e.err.Error(), e.resultXDR, e.diagnosticEventsXDR)
 }
 
 // Unwrap returns the underlying error.

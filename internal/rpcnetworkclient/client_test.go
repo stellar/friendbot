@@ -88,10 +88,14 @@ func TestNetworkError_ResultString(t *testing.T) {
 
 func TestNetworkError_Error(t *testing.T) {
 	originalErr := errors.New("original error")
-	networkErr := &NetworkError{err: originalErr}
+	networkErr := &NetworkError{
+		err:                 originalErr,
+		resultXDR:           "test_result_xdr",
+		diagnosticEventsXDR: []string{"event1", "event2"},
+	}
 
 	result := networkErr.Error()
-	assert.Equal(t, "original error", result)
+	assert.Equal(t, "original error, result_xdr: test_result_xdr, diagnostic_events_xdr: [event1 event2]", result)
 }
 
 func TestNetworkError_Unwrap(t *testing.T) {
