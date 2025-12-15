@@ -130,14 +130,59 @@ The service will be available at `http://localhost:8004`.
    ./friendbot --conf=friendbot.cfg
    ```
 
+### Command Line Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--conf` | Path to the configuration file | `./friendbot.cfg` |
+| `--secret` | Path to a separate secrets file (optional) | None |
+
 ### Configuration
 
-The service uses a TOML configuration file. Here are the key settings:
+The service uses TOML configuration files. Configuration can be provided in a single file, or split into separate config and secret files.
+
+#### Single File Configuration
+
+All settings including secrets can be in one file:
+
+```
+./friendbot --conf=friendbot.cfg
+```
+
+#### Separate Config and Secret Files
+
+For environments where you want to store secrets separately:
+
+```
+./friendbot --conf=config.cfg --secret=secrets.cfg
+```
+
+The `--secret` file can contain secrets:
+
+```toml
+# secrets.cfg
+friendbot_secret = "S..."
+```
+
+The `--conf` file contains everything else:
+
+```toml
+# config.cfg
+port = 8004
+network_passphrase = "Test SDF Network ; September 2015"
+horizon_url = "https://horizon-testnet.stellar.org"
+starting_balance = "10000.00"
+```
+
+> [!NOTE]
+> For backwards compatibility, `friendbot_secret` can still be included in the `--conf` file. If both files contain `friendbot_secret`, the value from `--secret` takes precedence.
+
+#### Configuration Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `port` | Port to listen on | `8000` |
-| `friendbot_secret` | Secret key for the friendbot account | Required |
+| `friendbot_secret` | Secret key for the friendbot account (prefer using `--secret` file) | None |
 | `network_passphrase` | Stellar network passphrase | `"Test SDF Network ; September 2015"` |
 | `horizon_url` | Horizon server URL (use either this or `rpc_url`, not both) | `"https://horizon-testnet.stellar.org"` |
 | `rpc_url` | Stellar RPC server URL (use either this or `horizon_url`, not both) | None |
@@ -154,6 +199,13 @@ The service uses a TOML configuration file. Here are the key settings:
 > [!NOTE]
 > The `fund_contract_addresses` option requires `rpc_url` to be configured. Contract address funding is not supported when using `horizon_url`.
 
+#### Secret Settings
+
+Settings available in the `--secret` file:
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| `friendbot_secret` | Secret key for the friendbot account | Yes |
 
 ## Development
 
