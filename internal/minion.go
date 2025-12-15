@@ -8,8 +8,10 @@ import (
 
 	"github.com/stellar/go/amount"
 	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/support/errors"
 	"github.com/stellar/go/txnbuild"
+	"github.com/stellar/go/xdr"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -57,27 +59,34 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 		}
 		return
 	}
+
+	// Check if the destination exists and get its balance.
+	// For G addresses: checks if account exists on the ledger.
+	// For C addresses: contracts are treated as always existing, balance is queried via SAC.
 	exists, balance, err := minion.CheckAccountExists(minion, minion.NetworkClient, destAddress)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
-			maybeErr:                errors.Wrap(err, "checking account exists"),
+			maybeErr:                errors.Wrap(err, "checking destination"),
 		}
 		return
 	}
-	if exists {
-		span.AddEvent("Destination account exists")
-		span.SetAttributes(attribute.String("destination.account_address", destAddress),
-			attribute.String("destination.account_balance", balance))
-	}
+	span.SetAttributes(
+		attribute.String("destination.address", destAddress),
+		attribute.Bool("destination.exists", exists),
+		attribute.String("destination.balance", balance),
+	)
+
+	// Check if destination is already funded to starting balance
 	err = minion.checkBalance(balance)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
-			maybeErr:                errors.Wrap(err, "account already funded"),
+			maybeErr:                errors.Wrap(err, "destination already funded"),
 		}
 		return
 	}
+
 	txHash, txStr, err := minion.makeTx(destAddress, exists)
 	if err != nil {
 		resultChan <- SubmitResult{
@@ -214,6 +223,12 @@ func (minion *Minion) checkBalance(balance string) error {
 }
 
 func (minion *Minion) makeTx(destAddress string, exists bool) ([32]byte, string, error) {
+	// Check if the destination is a contract address (C address)
+	if strkey.IsValidContractAddress(destAddress) {
+		return minion.makeContractPaymentTx(destAddress)
+	}
+
+	// For regular accounts (G addresses), use the existing logic
 	if exists {
 		return minion.makePaymentTx(destAddress)
 	} else {
@@ -293,4 +308,113 @@ func (minion *Minion) makePaymentTx(destAddress string) ([32]byte, string, error
 	}
 
 	return txh, txe, err
+}
+
+// makeContractPaymentTx creates a transaction that transfers native XLM to a contract
+// using the native Stellar Asset Contract (SAC) transfer function.
+// This requires simulation to get the resource fees.
+func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byte, string, error) {
+	_, span := botTracer.Start(context.Background(), "minion.make_contract_payment_tx")
+	defer span.End()
+
+	// Create the InvokeHostFunction operation using PaymentToContract helper.
+	// This helper builds the SAC transfer invocation and sets up the auth entry.
+	invokeOp, err := txnbuild.NewPaymentToContract(txnbuild.PaymentToContractParams{
+		NetworkPassphrase: minion.Network,
+		Destination:       destContractAddress,
+		Amount:            minion.StartingBalance,
+		Asset:             txnbuild.NativeAsset{},
+		SourceAccount:     minion.BotAccount.GetAccountID(),
+	})
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to create payment to contract operation")
+	}
+
+	// Build the initial transaction for simulation (with auth, without Soroban resource data)
+	tx, err := txnbuild.NewTransaction(
+		txnbuild.TransactionParams{
+			SourceAccount:        minion.Account,
+			IncrementSequenceNum: true,
+			Operations:           []txnbuild.Operation{&invokeOp},
+			BaseFee:              minion.BaseFee,
+			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()},
+		},
+	)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to build initial tx for simulation")
+	}
+
+	// Serialize the transaction for simulation
+	txXDR, err := tx.Base64()
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to serialize tx for simulation")
+	}
+
+	// Simulate the transaction to get resource fees
+	simResult, err := minion.NetworkClient.SimulateTransaction(txXDR)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to simulate transaction")
+	}
+
+	// Log simulation result data
+	span.SetAttributes(
+		attribute.String("simulation.transaction_data_xdr", simResult.TransactionDataXDR),
+		attribute.String("simulation.result_xdr", simResult.ResultXDR),
+	)
+
+	// Parse the SorobanTransactionData from the simulation result
+	var sorobanData xdr.SorobanTransactionData
+	if err := xdr.SafeUnmarshalBase64(simResult.TransactionDataXDR, &sorobanData); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to parse soroban transaction data")
+	}
+
+	// Set the Soroban resource data on the operation.
+	// The txnbuild package automatically includes the resource fee from the
+	// SorobanTransactionData when calculating the total transaction fee.
+	invokeOp.Ext = xdr.TransactionExt{
+		V:           1,
+		SorobanData: &sorobanData,
+	}
+
+	// Rebuild the transaction with the updated operation containing Soroban data.
+	tx, err = txnbuild.NewTransaction(
+		txnbuild.TransactionParams{
+			SourceAccount:        minion.Account,
+			IncrementSequenceNum: true,
+			Operations:           []txnbuild.Operation{&invokeOp},
+			BaseFee:              minion.BaseFee,
+			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()},
+		},
+	)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to build final tx")
+	}
+
+	// Sign the transaction
+	tx, err = tx.Sign(minion.Network, minion.Keypair, minion.BotKeypair)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to sign tx")
+	}
+
+	txe, err := tx.Base64()
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to serialize")
+	}
+
+	txh, err := tx.Hash(minion.Network)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return [32]byte{}, "", errors.Wrap(err, "unable to hash")
+	}
+
+	span.SetStatus(codes.Ok, codes.Ok.String())
+	return txh, txe, nil
 }
