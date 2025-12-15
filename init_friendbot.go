@@ -164,8 +164,9 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 		if err != nil {
 			switch e := err.(type) {
 			case internal.NetworkError:
-				// If we hit an error here due to network congestion, try again until we hit max # of retries allowed
-				if e.IsTimeout() {
+				// If we hit an error here due to network congestion, or a bad seq on
+				// the source account, try again until we hit max # of retries allowed
+				if e.IsTimeout() || e.IsBadSequence() {
 					err = errors.Wrap(err, "submitting create accounts tx")
 					if currentSubmitTxRetry >= submitTxRetriesAllowed {
 						return minions, errors.Wrap(err, fmt.Sprintf("after retrying %d times", currentSubmitTxRetry))
