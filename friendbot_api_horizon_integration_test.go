@@ -56,6 +56,8 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		AppName:    "friendbot-integration-test",
 	}
 
+	networkClient := horizonnetworkclient.NewNetworkClient(hclient)
+
 	// Create minion that will fund accounts
 	minion := internal.Minion{
 		Account: internal.Account{
@@ -64,7 +66,7 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		Keypair:              minionKeypair,
 		BotAccount:           botAccount,
 		BotKeypair:           botKeypair,
-		NetworkClient:        horizonnetworkclient.NewNetworkClient(hclient),
+		NetworkClient:        networkClient,
 		Network:              networkPassphrase,
 		StartingBalance:      startingBalance,
 		SubmitTransaction:    internal.SubmitTransaction,
@@ -73,7 +75,7 @@ func setupHorizonIntegration(t *testing.T) (http.Handler, horizonclient.ClientIn
 		BaseFee:              baseFee,
 	}
 
-	fb := &internal.Bot{Minions: []internal.Minion{minion}}
+	fb := &internal.Bot{Minions: []internal.Minion{minion}, NetworkClient: networkClient}
 	registerProblems()
 	cfg := Config{}
 	router := initRouter(cfg, fb)
@@ -185,7 +187,7 @@ func TestFriendbotHorizonIntegration_MissingAddressParameter(t *testing.T) {
           "detail": "The request you sent was invalid in some way.",
           "extras": {
             "invalid_field": "addr",
-            "reason": "strkey is 0 bytes long; minimum valid length is 5"
+            "reason": "invalid address: must be a valid G or C address"
           }
         }`
 	assert.JSONEq(t, expectedJSON, body)
@@ -212,7 +214,7 @@ func TestFriendbotHorizonIntegration_InvalidAddress(t *testing.T) {
           "detail": "The request you sent was invalid in some way.",
           "extras": {
             "invalid_field": "addr",
-            "reason": "base32 decode failed: illegal base32 data at input byte 15"
+            "reason": "invalid address: must be a valid G or C address"
           }
         }`
 	assert.JSONEq(t, expectedJSON, body)

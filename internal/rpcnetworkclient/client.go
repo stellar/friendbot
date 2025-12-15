@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/stellar/go/amount"
 	rpcclient "github.com/stellar/go/clients/rpcclient"
 	protocol "github.com/stellar/go/protocols/rpc"
+	"github.com/stellar/go/strkey"
+	"github.com/stellar/go/txnbuild"
 	"github.com/stellar/go/xdr"
 )
 
@@ -78,7 +81,7 @@ func (e *NetworkError) DiagnosticEventStrings() []string {
 
 // Error implements the error interface.
 func (e *NetworkError) Error() string {
-	return e.err.Error()
+	return fmt.Sprintf("%s, result_xdr: %s, diagnostic_events_xdr: %v", e.err.Error(), e.resultXDR, e.diagnosticEventsXDR)
 }
 
 // Unwrap returns the underlying error.
@@ -89,9 +92,13 @@ func (e *NetworkError) Unwrap() error {
 // Ensure NetworkError implements the internal.NetworkError interface.
 var _ internal.NetworkError = (*NetworkError)(nil)
 
+// zeroAddress is the zero G address used as source account for simulations.
+const zeroAddress = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
+
 // NetworkClient wraps an RPC client and implements the internal.NetworkClient interface.
 type NetworkClient struct {
-	client *rpcclient.Client
+	client      *rpcclient.Client
+	nativeSACID xdr.Hash
 	// TODO: Remove this field once rpcclient.Client exposes URL().
 	// See https://github.com/stellar/go-stellar-sdk/issues/5885
 	url string
@@ -101,9 +108,18 @@ type NetworkClient struct {
 var _ internal.NetworkClient = (*NetworkClient)(nil)
 
 // NewNetworkClient creates a new NetworkClient wrapping the given RPC client.
-func NewNetworkClient(url string, httpClient *http.Client) *NetworkClient {
+// The networkPassphrase is used to derive the native SAC contract address for balance queries.
+func NewNetworkClient(url string, httpClient *http.Client, networkPassphrase string) *NetworkClient {
 	client := rpcclient.NewClient(url, httpClient)
-	return &NetworkClient{client: client, url: url}
+	nativeSACID, err := xdr.MustNewNativeAsset().ContractID(networkPassphrase)
+	if err != nil {
+		panic(fmt.Sprintf("failed to derive native SAC ID: %v", err))
+	}
+	return &NetworkClient{
+		client:      client,
+		nativeSACID: nativeSACID,
+		url:         url,
+	}
 }
 
 // URL returns the RPC URL used by this client.
@@ -192,8 +208,55 @@ func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string
 	return nil
 }
 
+// SimulateTransaction simulates a transaction using the underlying RPC client.
+// This is required for Soroban transactions to get resource fees.
+func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
+	defer cancel()
+
+	request := protocol.SimulateTransactionRequest{
+		Transaction: txXDR,
+	}
+
+	response, err := r.client.SimulateTransaction(ctx, request)
+	if err != nil {
+		return nil, &NetworkError{err: err}
+	}
+
+	if response.Error != "" {
+		return nil, &NetworkError{err: fmt.Errorf("simulation error: %s", response.Error)}
+	}
+
+	// Extract result XDR if present
+	var resultXDR string
+	for _, result := range response.Results {
+		if result.ReturnValueXDR != nil && resultXDR == "" {
+			resultXDR = *result.ReturnValueXDR
+		}
+	}
+
+	return &internal.SimulateTransactionResult{
+		TransactionDataXDR: response.TransactionDataXDR,
+		ResultXDR:          resultXDR,
+	}, nil
+}
+
 // GetAccountDetails retrieves account details using the underlying RPC client.
-func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
+// For regular accounts (G addresses), it queries the ledger directly.
+// For contract addresses (C addresses), it queries the native SAC balance via simulation.
+// Contracts are treated as always existing, with sequence 0.
+func (r *NetworkClient) GetAccountDetails(address string) (*internal.AccountDetails, error) {
+	// Check if this is a contract address (C address)
+	if strkey.IsValidContractAddress(address) {
+		return r.getContractDetails(address)
+	}
+
+	// Regular account (G address)
+	return r.getAccountDetails(address)
+}
+
+// getAccountDetails retrieves details for a regular Stellar account (G address).
+func (r *NetworkClient) getAccountDetails(accountID string) (*internal.AccountDetails, error) {
 	accountIDObj, err := xdr.AddressToAccountId(accountID)
 	if err != nil {
 		return nil, &NetworkError{err: err}
@@ -238,4 +301,115 @@ func (r *NetworkClient) GetAccountDetails(accountID string) (*internal.AccountDe
 		Sequence: int64(entry.Account.SeqNum),
 		Balance:  balance,
 	}, nil
+}
+
+// getContractDetails retrieves the native token balance for a contract address.
+// Contracts are treated as always existing (no not-found error), with sequence 0.
+func (r *NetworkClient) getContractDetails(contractAddress string) (*internal.AccountDetails, error) {
+	// Decode the contract address to get the contract ID
+	contractIDBytes, err := strkey.Decode(strkey.VersionByteContract, contractAddress)
+	if err != nil {
+		return nil, &NetworkError{err: fmt.Errorf("invalid contract address: %w", err)}
+	}
+
+	// Convert to xdr.ContractId (which is a typedef for Hash, which is [32]byte)
+	var contractID xdr.ContractId
+	copy(contractID[:], contractIDBytes)
+
+	// Use the pre-computed native SAC ID
+	nativeSACID := xdr.ContractId(r.nativeSACID)
+
+	// Build the balance function call: balance(id: Address) -> i128
+	contractIDScAddress := xdr.ScAddress{
+		Type:       xdr.ScAddressTypeScAddressTypeContract,
+		ContractId: &contractID,
+	}
+
+	invokeOp := txnbuild.InvokeHostFunction{
+		HostFunction: xdr.HostFunction{
+			Type: xdr.HostFunctionTypeHostFunctionTypeInvokeContract,
+			InvokeContract: &xdr.InvokeContractArgs{
+				ContractAddress: xdr.ScAddress{
+					Type:       xdr.ScAddressTypeScAddressTypeContract,
+					ContractId: &nativeSACID,
+				},
+				FunctionName: xdr.ScSymbol("balance"),
+				Args: xdr.ScVec{
+					xdr.ScVal{
+						Type:    xdr.ScValTypeScvAddress,
+						Address: &contractIDScAddress,
+					},
+				},
+			},
+		},
+		SourceAccount: zeroAddress,
+	}
+
+	// Build the transaction for simulation using the zero address.
+	// The zero address doesn't need to exist for simulation.
+	tx, err := txnbuild.NewTransaction(
+		txnbuild.TransactionParams{
+			SourceAccount: &txnbuild.SimpleAccount{
+				AccountID: zeroAddress,
+				Sequence:  0,
+			},
+			IncrementSequenceNum: true,
+			Operations:           []txnbuild.Operation{&invokeOp},
+			BaseFee:              txnbuild.MinBaseFee,
+			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()},
+		},
+	)
+	if err != nil {
+		return nil, &NetworkError{err: fmt.Errorf("failed to build balance query tx: %w", err)}
+	}
+
+	// Serialize for simulation
+	txXDR, err := tx.Base64()
+	if err != nil {
+		return nil, &NetworkError{err: fmt.Errorf("failed to serialize balance query tx: %w", err)}
+	}
+
+	// Simulate the transaction
+	simResult, err := r.SimulateTransaction(txXDR)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the result - it should contain an i128 value
+	if simResult.ResultXDR == "" {
+		// No balance entry means 0 balance
+		return &internal.AccountDetails{
+			Sequence: 0,
+			Balance:  "0",
+		}, nil
+	}
+
+	var resultVal xdr.ScVal
+	if err := xdr.SafeUnmarshalBase64(simResult.ResultXDR, &resultVal); err != nil {
+		return nil, &NetworkError{err: fmt.Errorf("failed to parse balance result: %w", err)}
+	}
+
+	if resultVal.Type != xdr.ScValTypeScvI128 {
+		return nil, &NetworkError{err: fmt.Errorf("unexpected balance result type: %v", resultVal.Type)}
+	}
+
+	i128 := resultVal.MustI128()
+	// For balances that fit in int64, convert to string format
+	// The high part should be 0 and low part must fit in int64 for reasonable balances
+	if i128.Hi != 0 || i128.Lo > math.MaxInt64 {
+		return nil, &NetworkError{err: fmt.Errorf("balance too large")}
+	}
+
+	// Convert stroops to XLM string format
+	balance := amount.StringFromInt64(int64(i128.Lo)) //nolint:gosec // overflow checked above
+
+	return &internal.AccountDetails{
+		Sequence: 0, // Contracts don't have sequence numbers
+		Balance:  balance,
+	}, nil
+}
+
+// SupportsContractAddresses returns true as RPC can fund contract addresses.
+func (r *NetworkClient) SupportsContractAddresses() bool {
+	return true
 }

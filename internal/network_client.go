@@ -24,10 +24,27 @@ type NetworkClient interface {
 
 	// GetAccountDetails retrieves account information for the given account ID.
 	GetAccountDetails(accountID string) (*AccountDetails, error)
+
+	// SimulateTransaction simulates a transaction and returns the result.
+	// This is required for Soroban transactions to get resource fees and auth entries.
+	// For network clients that don't support simulation (like Horizon), this returns an error.
+	SimulateTransaction(txXDR string) (*SimulateTransactionResult, error)
+
+	// SupportsContractAddresses returns true if this network client can fund
+	// contract addresses (C addresses). RPC supports this, Horizon does not.
+	SupportsContractAddresses() bool
 }
 
 // AccountDetails contains the minimal information needed about an account.
 type AccountDetails struct {
 	Sequence int64
 	Balance  string
+}
+
+// SimulateTransactionResult contains the result of simulating a transaction.
+type SimulateTransactionResult struct {
+	// TransactionDataXDR is the SorobanTransactionData XDR in base64.
+	TransactionDataXDR string
+	// ResultXDR is the ScVal XDR return value from simulation in base64.
+	ResultXDR string
 }

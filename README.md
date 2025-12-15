@@ -5,7 +5,7 @@
 
 Stellar's native asset faucet.
 
-Friendbot helps users of the Stellar testnet by exposing a REST endpoint that creates & funds new accounts.
+Friendbot helps users of the Stellar testnet by exposing a REST endpoint that creates & funds new accounts and contract addresses.
 
 > [!WARNING]
 >
@@ -36,7 +36,7 @@ GET|POST /
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `addr` | string | Yes | The Stellar account address to fund |
+| `addr` | string | Yes | The Stellar address to fund (account G... address, or contract C... address) |
 
 
 ### Examples
@@ -54,6 +54,12 @@ curl http://localhost:8004/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZ
 ```
 curl -X POST "http://localhost:8004/" \
   -d "addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
+```
+
+**Funding a contract address** (requires `fund_contract_addresses` and `rpc_url` configured):
+
+```
+curl http://localhost:8004/?addr=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
 #### Using JavaScript
@@ -185,9 +191,13 @@ starting_balance = "10000.00"
 | `base_fee` | Base fee for transactions | `100000` |
 | `minion_batch_size` | Batch size for minion operations | `50` |
 | `submit_tx_retries_allowed` | Number of retry attempts for failed transactions | `5` |
+| `fund_contract_addresses` | Enable funding contract addresses (C addresses) | `false` |
 
 > [!NOTE]
 > You must configure either `horizon_url` or `rpc_url`, but not both. Friendbot can interact with the Stellar network through either Horizon (the traditional REST API) or RPC (the newer JSON-RPC API).
+
+> [!NOTE]
+> The `fund_contract_addresses` option requires `rpc_url` to be configured. Contract address funding is not supported when using `horizon_url`.
 
 #### Secret Settings
 
@@ -196,7 +206,6 @@ Settings available in the `--secret` file:
 | Setting | Description | Required |
 |---------|-------------|----------|
 | `friendbot_secret` | Secret key for the friendbot account | Yes |
-
 
 ## Development
 
