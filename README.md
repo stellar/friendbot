@@ -5,7 +5,7 @@
 
 Stellar's native asset faucet.
 
-Friendbot helps users of the Stellar testnet by exposing a REST endpoint that creates & funds new accounts.
+Friendbot helps users of the Stellar testnet by exposing a REST endpoint that creates & funds new accounts and contract addresses.
 
 > [!WARNING]
 >
@@ -36,7 +36,7 @@ GET|POST /
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `addr` | string | Yes | The Stellar account address to fund |
+| `addr` | string | Yes | The Stellar address to fund (account G... address, or contract C... address) |
 
 
 ### Examples
@@ -54,6 +54,12 @@ curl http://localhost:8004/?addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZ
 ```
 curl -X POST "http://localhost:8004/" \
   -d "addr=GDJIN6W6PLTPKLLM57UW65ZH4BITUXUMYQHIMAZFYXF45PZVAWDBI77Z"
+```
+
+**Funding a contract address** (requires `fund_contract_addresses` and `rpc_url` configured):
+
+```
+curl http://localhost:8004/?addr=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
 #### Using JavaScript
