@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -95,8 +96,27 @@ func (handler *FriendbotHandler) loadAddress(ctx context.Context, r *http.Reques
 		return unescaped, err
 	}
 
-	_, err = strkey.Decode(strkey.VersionByteAccountID, unescaped)
-	span.SetAttributes(attribute.String("destination.account", address))
-	span.SetStatus(codes.Ok, codes.Ok.String())
+	// Log the address for tracing (even if invalid)
+	span.SetAttributes(attribute.String("destination.address", unescaped))
+
+	// Check if it's a valid G address (account)
+	if strkey.IsValidEd25519PublicKey(unescaped) {
+		span.SetStatus(codes.Ok, codes.Ok.String())
+		return unescaped, nil
+	}
+
+	// Check if it's a valid C address (contract)
+	if strkey.IsValidContractAddress(unescaped) {
+		if !handler.Friendbot.SupportsContractAddresses() {
+			err = errors.New("contract addresses are not supported or enabled")
+			span.SetStatus(codes.Error, err.Error())
+			return unescaped, err
+		}
+		span.SetStatus(codes.Ok, codes.Ok.String())
+		return unescaped, nil
+	}
+
+	err = errors.New("invalid address: must be a valid G or C address")
+	span.SetStatus(codes.Error, err.Error())
 	return unescaped, err
 }
