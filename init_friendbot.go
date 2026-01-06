@@ -8,11 +8,11 @@ import (
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/horizonnetworkclient"
 	"github.com/stellar/friendbot/internal/rpcnetworkclient"
-	"github.com/stellar/go/clients/horizonclient"
-	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/strkey"
-	"github.com/stellar/go/support/errors"
-	"github.com/stellar/go/txnbuild"
+	"github.com/stellar/go-stellar-sdk/clients/horizonclient"
+	"github.com/stellar/go-stellar-sdk/keypair"
+	"github.com/stellar/go-stellar-sdk/strkey"
+	"github.com/stellar/go-stellar-sdk/support/errors"
+	"github.com/stellar/go-stellar-sdk/txnbuild"
 )
 
 func initFriendbot(cfg Config, secrets Secrets) (*internal.Bot, error) {

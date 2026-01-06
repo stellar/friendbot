@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/stellar/go/strkey"
-	"github.com/stellar/go/support/render/hal"
-	"github.com/stellar/go/support/render/problem"
+	"github.com/stellar/go-stellar-sdk/strkey"
+	"github.com/stellar/go-stellar-sdk/support/render/hal"
+	"github.com/stellar/go-stellar-sdk/support/render/problem"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

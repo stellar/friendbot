@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/support/errors"
+	"github.com/stellar/go-stellar-sdk/keypair"
+	"github.com/stellar/go-stellar-sdk/support/errors"
 )
 
 type maybeDuration struct {

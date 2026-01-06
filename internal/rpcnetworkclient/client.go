@@ -10,12 +10,12 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stellar/friendbot/internal"
-	"github.com/stellar/go/amount"
-	rpcclient "github.com/stellar/go/clients/rpcclient"
-	protocol "github.com/stellar/go/protocols/rpc"
-	"github.com/stellar/go/strkey"
-	"github.com/stellar/go/txnbuild"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/amount"
+	rpcclient "github.com/stellar/go-stellar-sdk/clients/rpcclient"
+	protocol "github.com/stellar/go-stellar-sdk/protocols/rpc"
+	"github.com/stellar/go-stellar-sdk/strkey"
+	"github.com/stellar/go-stellar-sdk/txnbuild"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 const (

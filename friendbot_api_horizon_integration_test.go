@@ -12,9 +12,9 @@ import (
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/friendbot/internal/horizonnetworkclient"
 	"github.com/stellar/friendbot/internal/testutil"
-	"github.com/stellar/go/clients/horizonclient"
-	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/txnbuild"
+	"github.com/stellar/go-stellar-sdk/clients/horizonclient"
+	"github.com/stellar/go-stellar-sdk/keypair"
+	"github.com/stellar/go-stellar-sdk/txnbuild"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
