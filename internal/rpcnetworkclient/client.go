@@ -149,7 +149,7 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 		}
 	}
 
-	txResponse, err := r.client.PollTransaction(ctx, response.Hash, rpcclient.PollTransactionOptions{})
+	txResponse, err := r.client.PollTransaction(ctx, response.Hash, rpcclient.NewPollTransactionOptions())
 	if err != nil {
 		// Context timeout/cancellation
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
