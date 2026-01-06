@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"github.com/stellar/go/support/errors"
+	"github.com/stellar/go-stellar-sdk/support/errors"
 )
 
 // Account implements the `txnbuild.Account` interface.

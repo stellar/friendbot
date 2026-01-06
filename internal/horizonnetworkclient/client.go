@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/stellar/friendbot/internal"
-	"github.com/stellar/go/clients/horizonclient"
-	"github.com/stellar/go/strkey"
+	"github.com/stellar/go-stellar-sdk/clients/horizonclient"
+	"github.com/stellar/go-stellar-sdk/strkey"
 )
 
 // ErrSimulationNotSupported is returned when SimulateTransaction is called on a Horizon client.
