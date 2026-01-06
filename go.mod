@@ -25,7 +25,7 @@ require (
 require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/riandyrn/otelchi v0.12.1
-	github.com/stellar/go-stellar-sdk v0.0.0-20260106024449-98a005d644e8
+	github.com/stellar/go-stellar-sdk v0.0.0-20260106225531-c77f40a164fb
 	go.opentelemetry.io/otel v1.34.0
 	go.opentelemetry.io/otel/trace v1.34.0
 )

@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	submitTransactionTimeout = 30 * time.Second
-	statusError              = "ERROR"
+	submitTransactionTimeout    = 30 * time.Second
+	pollTransactionInitInterval = 500 * time.Millisecond
+	pollTransactionMaxInterval  = 3500 * time.Millisecond
+	statusError                 = "ERROR"
 )
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
@@ -149,7 +151,10 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 		}
 	}
 
-	txResponse, err := r.client.PollTransaction(ctx, response.Hash, rpcclient.NewPollTransactionOptions())
+	pollOpts := rpcclient.NewPollTransactionOptions().
+		WithInitialInterval(pollTransactionInitInterval).
+		WithMaxInterval(pollTransactionMaxInterval)
+	txResponse, err := r.client.PollTransactionWithOptions(ctx, response.Hash, pollOpts)
 	if err != nil {
 		// Context timeout/cancellation
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
