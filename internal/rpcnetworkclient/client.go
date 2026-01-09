@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/stellar/friendbot/internal"
 	"github.com/stellar/go-stellar-sdk/amount"
 	rpcclient "github.com/stellar/go-stellar-sdk/clients/rpcclient"
@@ -19,10 +18,10 @@ import (
 )
 
 const (
-	submitTransactionTimeout = 30 * time.Second
-	backoffInitialInterval   = 500 * time.Millisecond
-	backoffMaxInterval       = 3500 * time.Millisecond
-	statusError              = "ERROR"
+	submitTransactionTimeout    = 30 * time.Second
+	pollTransactionInitInterval = 500 * time.Millisecond
+	pollTransactionMaxInterval  = 3500 * time.Millisecond
+	statusError                 = "ERROR"
 )
 
 // NetworkError wraps an RPC error and implements the internal.NetworkError interface.
@@ -152,59 +151,30 @@ func (r *NetworkClient) SubmitTransaction(txXDR string) error {
 		}
 	}
 
-	return r.pollTransactionStatus(ctx, response.Hash)
-}
-
-// pollTransactionStatus polls GetTransaction until the transaction is finalized
-// (SUCCESS or FAILED) or the context times out.
-func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string) error {
-	b := backoff.NewExponentialBackOff()
-	b.InitialInterval = backoffInitialInterval
-	b.MaxInterval = backoffMaxInterval
-	// Note: MaxElapsedTime is not set here because the context timeout
-	// (submitTransactionTimeout) already handles the overall timeout.
-
-	err := backoff.Retry(func() error {
-		txResponse, err := r.client.GetTransaction(ctx, protocol.GetTransactionRequest{
-			Hash: txHash,
-		})
-		if err != nil {
-			return backoff.Permanent(&NetworkError{err: err})
-		}
-
-		switch txResponse.Status {
-		case protocol.TransactionStatusSuccess:
-			return nil
-		case protocol.TransactionStatusFailed:
-			return backoff.Permanent(&NetworkError{
-				err:                 fmt.Errorf("transaction failed"),
-				resultXDR:           txResponse.ResultXDR,
-				diagnosticEventsXDR: txResponse.DiagnosticEventsXDR,
-			})
-		default:
-			// Transaction not yet processed (including NOT_FOUND status).
-			// After sendTransaction returns a hash, the transaction should
-			// eventually appear, so we retry until context timeout.
-			return fmt.Errorf("transaction not yet finalized")
-		}
-	}, backoff.WithContext(b, ctx))
-
+	pollOpts := rpcclient.NewPollTransactionOptions().
+		WithInitialInterval(pollTransactionInitInterval).
+		WithMaxInterval(pollTransactionMaxInterval)
+	txResponse, err := r.client.PollTransactionWithOptions(ctx, response.Hash, pollOpts)
 	if err != nil {
-		// Check if it's already a NetworkError (from Permanent)
-		var netErr *NetworkError
-		if errors.As(err, &netErr) {
-			return netErr
-		}
 		// Context timeout/cancellation
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return &NetworkError{
-				err:     fmt.Errorf("timeout waiting for transaction %s to finalize", txHash),
+				err:     fmt.Errorf("timeout waiting for transaction %s to finalize", response.Hash),
 				timeout: true,
 			}
 		}
-		// Unexpected error
 		return &NetworkError{err: err}
 	}
+
+	// Check for failed transaction (SDK returns response without error for FAILED)
+	if txResponse.Status == protocol.TransactionStatusFailed {
+		return &NetworkError{
+			err:                 fmt.Errorf("transaction failed"),
+			resultXDR:           txResponse.ResultXDR,
+			diagnosticEventsXDR: txResponse.DiagnosticEventsXDR,
+		}
+	}
+
 	return nil
 }
 
