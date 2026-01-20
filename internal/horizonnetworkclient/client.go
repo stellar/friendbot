@@ -1,6 +1,7 @@
 package horizonnetworkclient
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -87,7 +88,8 @@ func (h *NetworkClient) URL() string {
 }
 
 // SubmitTransaction submits a transaction using the underlying horizon client.
-func (h *NetworkClient) SubmitTransaction(txXDR string) error {
+func (h *NetworkClient) SubmitTransaction(ctx context.Context, txXDR string) error {
+	_ = ctx // Horizon client doesn't support context propagation
 	_, err := h.client.SubmitTransactionXDR(txXDR)
 	if err != nil {
 		if hErr, ok := err.(*horizonclient.Error); ok {
@@ -100,7 +102,8 @@ func (h *NetworkClient) SubmitTransaction(txXDR string) error {
 
 // GetAccountDetails retrieves account details using the underlying horizon client.
 // For contract addresses (C addresses), this returns an error since Horizon cannot query contract balances.
-func (h *NetworkClient) GetAccountDetails(address string) (*internal.AccountDetails, error) {
+func (h *NetworkClient) GetAccountDetails(ctx context.Context, address string) (*internal.AccountDetails, error) {
+	_ = ctx // Horizon client doesn't support context propagation
 	// Contract addresses are not supported by Horizon
 	if strkey.IsValidContractAddress(address) {
 		return nil, ErrContractAddressNotSupported
@@ -131,7 +134,8 @@ func (h *NetworkClient) GetAccountDetails(address string) (*internal.AccountDeta
 
 // SimulateTransaction returns an error as Horizon does not support transaction simulation.
 // To fund contracts (C addresses), use RPC instead.
-func (h *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+func (h *NetworkClient) SimulateTransaction(ctx context.Context, txXDR string) (*internal.SimulateTransactionResult, error) {
+	_ = ctx // Horizon client doesn't support context propagation
 	return nil, ErrSimulationNotSupported
 }
 

@@ -1,5 +1,7 @@
 package internal
 
+import "context"
+
 // NetworkError represents a network operation error with abstracted checking methods.
 type NetworkError interface {
 	error
@@ -20,15 +22,15 @@ type NetworkError interface {
 // implementations (Horizon, RPC, etc.) to be used interchangeably.
 type NetworkClient interface {
 	// SubmitTransaction submits a transaction and blocks until it can return a result.
-	SubmitTransaction(txXDR string) error
+	SubmitTransaction(ctx context.Context, txXDR string) error
 
 	// GetAccountDetails retrieves account information for the given account ID.
-	GetAccountDetails(accountID string) (*AccountDetails, error)
+	GetAccountDetails(ctx context.Context, accountID string) (*AccountDetails, error)
 
 	// SimulateTransaction simulates a transaction and returns the result.
 	// This is required for Soroban transactions to get resource fees and auth entries.
 	// For network clients that don't support simulation (like Horizon), this returns an error.
-	SimulateTransaction(txXDR string) (*SimulateTransactionResult, error)
+	SimulateTransaction(ctx context.Context, txXDR string) (*SimulateTransactionResult, error)
 
 	// SupportsContractAddresses returns true if this network client can fund
 	// contract addresses (C addresses). RPC supports this, Horizon does not.

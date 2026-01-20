@@ -1,6 +1,7 @@
 package rpcnetworkclient
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -135,7 +136,7 @@ func TestNetworkClient_GetAccountDetails_Success(t *testing.T) {
 	defer server.Close()
 
 	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
-	details, err := client.GetAccountDetails(testAccountID)
+	details, err := client.GetAccountDetails(context.Background(), testAccountID)
 
 	require.NoError(t, err)
 	assert.Equal(t, testSequence, details.Sequence)
@@ -157,7 +158,7 @@ func TestNetworkClient_GetAccountDetails_NotFound(t *testing.T) {
 	defer server.Close()
 
 	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
-	details, err := client.GetAccountDetails(testAccountID)
+	details, err := client.GetAccountDetails(context.Background(), testAccountID)
 
 	assert.Nil(t, details)
 	require.Error(t, err)
@@ -175,7 +176,7 @@ func TestNetworkClient_GetAccountDetails_InvalidAccountID(t *testing.T) {
 	defer server.Close()
 
 	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
-	details, err := client.GetAccountDetails("invalid-account-id")
+	details, err := client.GetAccountDetails(context.Background(), "invalid-account-id")
 
 	assert.Nil(t, details)
 	require.Error(t, err)
@@ -206,7 +207,7 @@ func TestNetworkClient_SubmitTransaction_Success(t *testing.T) {
 	defer server.Close()
 
 	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
-	err := client.SubmitTransaction(testTxXDR)
+	err := client.SubmitTransaction(context.Background(), testTxXDR)
 
 	assert.NoError(t, err)
 }
@@ -228,7 +229,7 @@ func TestNetworkClient_SubmitTransaction_Rejected(t *testing.T) {
 	defer server.Close()
 
 	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
-	err := client.SubmitTransaction(testTxXDR)
+	err := client.SubmitTransaction(context.Background(), testTxXDR)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "transaction rejected")
@@ -268,7 +269,7 @@ func TestNetworkClient_SubmitTransaction_Failed(t *testing.T) {
 	defer server.Close()
 
 	client := NewNetworkClient(server.URL, nil, testNetworkPassphrase)
-	err := client.SubmitTransaction(testTxXDR)
+	err := client.SubmitTransaction(context.Background(), testTxXDR)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "transaction failed")

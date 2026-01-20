@@ -21,11 +21,11 @@ func TestMinion_NoChannelErrors(t *testing.T) {
 		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckSequenceRefresh := func(minion *Minion, networkClient NetworkClient) error {
+	mockCheckSequenceRefresh := func(ctx context.Context, minion *Minion, networkClient NetworkClient) error {
 		return errors.New("could not refresh sequence")
 	}
 
-	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -93,11 +93,11 @@ func TestMinion_CorrectNumberOfTxSubmissions(t *testing.T) {
 		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckSequenceRefresh := func(minion *Minion, networkClient NetworkClient) error {
+	mockCheckSequenceRefresh := func(ctx context.Context, minion *Minion, networkClient NetworkClient) error {
 		return nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 

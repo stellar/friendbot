@@ -22,7 +22,7 @@ func TestFriendbot_Pay_accountDoesNotExist(t *testing.T) {
 		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -95,7 +95,7 @@ func TestFriendbot_Pay_accountExists(t *testing.T) {
 		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return true, "0", nil
 	}
 
@@ -164,7 +164,7 @@ func TestFriendbot_Pay_accountExistsAlreadyFunded(t *testing.T) {
 		return &TransactionResult{Successful: true}, nil
 	}
 
-	mockCheckAccountExists := func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error) {
 		return true, "10000.00", nil
 	}
 

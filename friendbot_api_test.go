@@ -29,7 +29,7 @@ func setup(t *testing.T) http.Handler {
 		return &txSuccess, nil
 	}
 
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		// Return account doesn't exist for all test cases (will be overridden in specific tests)
 		return false, "0", nil
 	}
@@ -180,7 +180,7 @@ func TestFriendbotAPI_AccountAlreadyFunded(t *testing.T) {
 		return &txSuccess, nil
 	}
 
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		return true, "10000.00", nil // Account exists and has balance
 	}
 
@@ -356,15 +356,15 @@ func TestFriendbotAPI_InvalidContractAddress(t *testing.T) {
 // mockNetworkClient implements internal.NetworkClient for basic testing without contract support
 type mockNetworkClient struct{}
 
-func (m *mockNetworkClient) SubmitTransaction(txXDR string) error {
+func (m *mockNetworkClient) SubmitTransaction(ctx context.Context, txXDR string) error {
 	return nil
 }
 
-func (m *mockNetworkClient) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
+func (m *mockNetworkClient) GetAccountDetails(ctx context.Context, accountID string) (*internal.AccountDetails, error) {
 	return nil, nil
 }
 
-func (m *mockNetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+func (m *mockNetworkClient) SimulateTransaction(ctx context.Context, txXDR string) (*internal.SimulateTransactionResult, error) {
 	return nil, horizonnetworkclient.ErrSimulationNotSupported
 }
 
@@ -378,15 +378,15 @@ type mockNetworkClientWithSimulation struct {
 	simulateErr    error
 }
 
-func (m *mockNetworkClientWithSimulation) SubmitTransaction(txXDR string) error {
+func (m *mockNetworkClientWithSimulation) SubmitTransaction(ctx context.Context, txXDR string) error {
 	return nil
 }
 
-func (m *mockNetworkClientWithSimulation) GetAccountDetails(accountID string) (*internal.AccountDetails, error) {
+func (m *mockNetworkClientWithSimulation) GetAccountDetails(ctx context.Context, accountID string) (*internal.AccountDetails, error) {
 	return nil, nil
 }
 
-func (m *mockNetworkClientWithSimulation) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+func (m *mockNetworkClientWithSimulation) SimulateTransaction(ctx context.Context, txXDR string) (*internal.SimulateTransactionResult, error) {
 	if m.simulateErr != nil {
 		return nil, m.simulateErr
 	}
@@ -410,7 +410,7 @@ func TestFriendbotAPI_ContractFunding_SuccessfulWithMockedSimulation(t *testing.
 		return &txSuccess, nil
 	}
 
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -481,7 +481,7 @@ func TestFriendbotAPI_ContractFunding_POST(t *testing.T) {
 		return &txSuccess, nil
 	}
 
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -550,7 +550,7 @@ func TestFriendbotAPI_ContractFunding_SimulationError(t *testing.T) {
 		return &txSuccess, nil
 	}
 
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -619,7 +619,7 @@ func TestFriendbotAPI_ContractChecksBalance(t *testing.T) {
 
 	// This mock should be called for contract addresses now
 	mockCheckAccountExistsCalled := false
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		mockCheckAccountExistsCalled = true
 		return true, "0", nil // Return low balance so funding proceeds
 	}
@@ -687,7 +687,7 @@ func TestFriendbotAPI_GAddressStillWorksWithSimulationClient(t *testing.T) {
 		return &txSuccess, nil
 	}
 
-	mockCheckAccountExists := func(minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
+	mockCheckAccountExists := func(ctx context.Context, minion *internal.Minion, networkClient internal.NetworkClient, destAddress string) (bool, string, error) {
 		return false, "0", nil
 	}
 
@@ -759,9 +759,9 @@ type trackingNetworkClient struct {
 	simulateCalled *bool
 }
 
-func (t *trackingNetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
+func (t *trackingNetworkClient) SimulateTransaction(ctx context.Context, txXDR string) (*internal.SimulateTransactionResult, error) {
 	*t.simulateCalled = true
-	return t.mockNetworkClientWithSimulation.SimulateTransaction(txXDR)
+	return t.mockNetworkClientWithSimulation.SimulateTransaction(ctx, txXDR)
 }
 
 func (t *trackingNetworkClient) SupportsContractAddresses() bool {
