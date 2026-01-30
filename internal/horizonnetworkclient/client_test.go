@@ -1,6 +1,7 @@
 package horizonnetworkclient
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -135,7 +136,7 @@ func TestNetworkClient_SubmitTransaction_Success(t *testing.T) {
 	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(horizon.Transaction{}, nil)
 
 	client := NewNetworkClient(mockClient)
-	err := client.SubmitTransaction("test-xdr")
+	err := client.SubmitTransaction(context.Background(), "test-xdr")
 
 	assert.NoError(t, err)
 	mockClient.AssertExpectations(t)
@@ -154,7 +155,7 @@ func TestNetworkClient_SubmitTransaction_HorizonError(t *testing.T) {
 	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(horizon.Transaction{}, horizonErr)
 
 	client := NewNetworkClient(mockClient)
-	err := client.SubmitTransaction("test-xdr")
+	err := client.SubmitTransaction(context.Background(), "test-xdr")
 
 	assert.Error(t, err)
 
@@ -172,7 +173,7 @@ func TestNetworkClient_SubmitTransaction_GenericError(t *testing.T) {
 	mockClient.On("SubmitTransactionXDR", "test-xdr").Return(horizon.Transaction{}, genericErr)
 
 	client := NewNetworkClient(mockClient)
-	err := client.SubmitTransaction("test-xdr")
+	err := client.SubmitTransaction(context.Background(), "test-xdr")
 
 	assert.Error(t, err)
 	assert.Equal(t, genericErr, err)
@@ -202,7 +203,7 @@ func TestNetworkClient_GetAccountDetails_Success(t *testing.T) {
 	mockClient.On("AccountDetail", horizonclient.AccountRequest{AccountID: accountID}).Return(account, nil)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.GetAccountDetails(accountID)
+	result, err := client.GetAccountDetails(context.Background(), accountID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -231,7 +232,7 @@ func TestNetworkClient_GetAccountDetails_NoNativeBalance(t *testing.T) {
 	mockClient.On("AccountDetail", horizonclient.AccountRequest{AccountID: accountID}).Return(account, nil)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.GetAccountDetails(accountID)
+	result, err := client.GetAccountDetails(context.Background(), accountID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -255,7 +256,7 @@ func TestNetworkClient_GetAccountDetails_HorizonError(t *testing.T) {
 	mockClient.On("AccountDetail", horizonclient.AccountRequest{AccountID: accountID}).Return(horizon.Account{}, horizonErr)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.GetAccountDetails(accountID)
+	result, err := client.GetAccountDetails(context.Background(), accountID)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -275,7 +276,7 @@ func TestNetworkClient_GetAccountDetails_GenericError(t *testing.T) {
 	mockClient.On("AccountDetail", horizonclient.AccountRequest{AccountID: accountID}).Return(horizon.Account{}, genericErr)
 
 	client := NewNetworkClient(mockClient)
-	result, err := client.GetAccountDetails(accountID)
+	result, err := client.GetAccountDetails(context.Background(), accountID)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
