@@ -1,10 +1,14 @@
 name: Quickstart
 
 on:
+  push:
+    branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 18 * * *' # Daily at 10am PT (6pm UTC)
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.ref_protected == 'true' && github.sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,28 +21,28 @@ jobs:
             "tag": "latest-with-pr",
             "inherit": "latest",
             "deps": [
-              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+              { "name": "friendbot", "repo": "${{ github.repository }}", "ref": "${{ github.event.pull_request.head.sha || github.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
             ]
           },
           {
             "tag": "testing-with-pr",
             "inherit": "testing",
             "deps": [
-              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+              { "name": "friendbot", "repo": "${{ github.repository }}", "ref": "${{ github.event.pull_request.head.sha || github.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
             ]
           },
           {
             "tag": "nightly-with-pr",
             "inherit": "nightly",
             "deps": [
-              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+              { "name": "friendbot", "repo": "${{ github.repository }}", "ref": "${{ github.event.pull_request.head.sha || github.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
             ]
           },
           {
             "tag": "nightly-next-with-pr",
             "inherit": "nightly-next",
             "deps": [
-              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+              { "name": "friendbot", "repo": "${{ github.repository }}", "ref": "${{ github.event.pull_request.head.sha || github.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
             ]
           }
         ]
