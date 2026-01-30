@@ -1,0 +1,45 @@
+name: Quickstart
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: stellar/quickstart/.github/workflows/build.yml@main
+    with:
+      images: |
+        [
+          {
+            "tag": "latest-with-pr",
+            "inherit": "latest",
+            "deps": [
+              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+            ]
+          },
+          {
+            "tag": "testing-with-pr",
+            "inherit": "testing",
+            "deps": [
+              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+            ]
+          },
+          {
+            "tag": "nightly-with-pr",
+            "inherit": "nightly",
+            "deps": [
+              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+            ]
+          },
+          {
+            "tag": "nightly-next-with-pr",
+            "inherit": "nightly-next",
+            "deps": [
+              { "name": "friendbot", "repo": "${{ github.event.pull_request.head.repo.full_name }}", "ref": "${{ github.event.pull_request.head.sha }}", "options": { "pkg": "github.com/stellar/friendbot" } }
+            ]
+          }
+        ]
+      archs: '["amd64"]'
