@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '0 18 * * *' # Daily at 10am PT (6pm UTC)
 
-permissions: # no permissions are required by this workflow
+permissions: {} # no permissions needed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_protected == 'true' && github.sha || github.ref }}
