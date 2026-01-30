@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"context"
+
 	"github.com/stellar/go-stellar-sdk/support/errors"
 )
 
@@ -27,8 +29,8 @@ func (a Account) GetSequenceNumber() (int64, error) {
 }
 
 // RefreshSequenceNumber gets an Account's correct in-memory sequence number from the network.
-func (a *Account) RefreshSequenceNumber(networkClient NetworkClient) error {
-	accountDetail, err := networkClient.GetAccountDetails(a.GetAccountID())
+func (a *Account) RefreshSequenceNumber(ctx context.Context, networkClient NetworkClient) error {
+	accountDetail, err := networkClient.GetAccountDetails(ctx, a.GetAccountID())
 	if err != nil {
 		return errors.Wrap(err, "getting account detail")
 	}

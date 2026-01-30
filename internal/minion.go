@@ -38,8 +38,8 @@ type Minion struct {
 
 	// Mockable functions
 	SubmitTransaction    func(ctx context.Context, minion *Minion, networkClient NetworkClient, txHash [32]byte, tx string) (*TransactionResult, error)
-	CheckSequenceRefresh func(minion *Minion, networkClient NetworkClient) error
-	CheckAccountExists   func(minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error)
+	CheckSequenceRefresh func(ctx context.Context, minion *Minion, networkClient NetworkClient) error
+	CheckAccountExists   func(ctx context.Context, minion *Minion, networkClient NetworkClient, destAddress string) (bool, string, error)
 
 	// Uninitialized.
 	forceRefreshSequence bool
@@ -51,7 +51,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 	ctx, span := botTracer.Start(ctx, "minion.run.pay_minion")
 	defer span.End()
 	span.SetAttributes(attribute.String("minion.account_id", minion.Account.AccountID))
-	err := minion.CheckSequenceRefresh(minion, minion.NetworkClient)
+	err := minion.CheckSequenceRefresh(ctx, minion, minion.NetworkClient)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
@@ -63,7 +63,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 	// Check if the destination exists and get its balance.
 	// For G addresses: checks if account exists on the ledger.
 	// For C addresses: contracts are treated as always existing, balance is queried via SAC.
-	exists, balance, err := minion.CheckAccountExists(minion, minion.NetworkClient, destAddress)
+	exists, balance, err := minion.CheckAccountExists(ctx, minion, minion.NetworkClient, destAddress)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
@@ -87,7 +87,7 @@ func (minion *Minion) Run(ctx context.Context, destAddress string, resultChan ch
 		return
 	}
 
-	txHash, txStr, err := minion.makeTx(destAddress, exists)
+	txHash, txStr, err := minion.makeTx(ctx, destAddress, exists)
 	if err != nil {
 		resultChan <- SubmitResult{
 			maybeTransactionSuccess: nil,
@@ -126,7 +126,7 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 	_, span := botTracer.Start(ctx, "minion.submit_transaction")
 	defer span.End()
 
-	err := networkClient.SubmitTransaction(tx)
+	err := networkClient.SubmitTransaction(ctx, tx)
 	if err != nil {
 		errStr := "submitting tx"
 		switch e := err.(type) {
@@ -171,11 +171,11 @@ func SubmitTransaction(ctx context.Context, minion *Minion, networkClient Networ
 
 // CheckSequenceRefresh establishes the minion's initial sequence number, if needed.
 // This should also be passed to the minion.
-func CheckSequenceRefresh(minion *Minion, networkClient NetworkClient) error {
+func CheckSequenceRefresh(ctx context.Context, minion *Minion, networkClient NetworkClient) error {
 	if minion.Account.Sequence != 0 && !minion.forceRefreshSequence {
 		return nil
 	}
-	err := minion.Account.RefreshSequenceNumber(networkClient)
+	err := minion.Account.RefreshSequenceNumber(ctx, networkClient)
 	if err != nil {
 		return errors.Wrap(err, "refreshing minion seqnum")
 	}
@@ -186,8 +186,8 @@ func CheckSequenceRefresh(minion *Minion, networkClient NetworkClient) error {
 // CheckAccountExists checks if the specified address exists as a Stellar account.
 // And returns the current native balance of the account also.
 // This should also be passed to the minion.
-func CheckAccountExists(minion *Minion, networkClient NetworkClient, address string) (bool, string, error) {
-	accountDetails, err := networkClient.GetAccountDetails(address)
+func CheckAccountExists(ctx context.Context, minion *Minion, networkClient NetworkClient, address string) (bool, string, error) {
+	accountDetails, err := networkClient.GetAccountDetails(ctx, address)
 	switch e := err.(type) {
 	case nil:
 		return true, accountDetails.Balance, nil
@@ -222,10 +222,10 @@ func (minion *Minion) checkBalance(balance string) error {
 	return nil
 }
 
-func (minion *Minion) makeTx(destAddress string, exists bool) ([32]byte, string, error) {
+func (minion *Minion) makeTx(ctx context.Context, destAddress string, exists bool) ([32]byte, string, error) {
 	// Check if the destination is a contract address (C address)
 	if strkey.IsValidContractAddress(destAddress) {
-		return minion.makeContractPaymentTx(destAddress)
+		return minion.makeContractPaymentTx(ctx, destAddress)
 	}
 
 	// For regular accounts (G addresses), use the existing logic
@@ -313,8 +313,8 @@ func (minion *Minion) makePaymentTx(destAddress string) ([32]byte, string, error
 // makeContractPaymentTx creates a transaction that transfers native XLM to a contract
 // using the native Stellar Asset Contract (SAC) transfer function.
 // This requires simulation to get the resource fees.
-func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byte, string, error) {
-	_, span := botTracer.Start(context.Background(), "minion.make_contract_payment_tx")
+func (minion *Minion) makeContractPaymentTx(ctx context.Context, destContractAddress string) ([32]byte, string, error) {
+	ctx, span := botTracer.Start(ctx, "minion.make_contract_payment_tx")
 	defer span.End()
 
 	// Create the InvokeHostFunction operation using PaymentToContract helper.
@@ -354,7 +354,7 @@ func (minion *Minion) makeContractPaymentTx(destContractAddress string) ([32]byt
 	}
 
 	// Simulate the transaction to get resource fees
-	simResult, err := minion.NetworkClient.SimulateTransaction(txXDR)
+	simResult, err := minion.NetworkClient.SimulateTransaction(ctx, txXDR)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return [32]byte{}, "", errors.Wrap(err, "unable to simulate transaction")

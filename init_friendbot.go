@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -101,7 +102,7 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 			ops        []txnbuild.Operation
 		)
 		// Refresh the sequence number before submitting a new transaction.
-		rerr := botAccount.RefreshSequenceNumber(networkClient)
+		rerr := botAccount.RefreshSequenceNumber(context.Background(), networkClient)
 		if rerr != nil {
 			return minions, errors.Wrap(rerr, "refreshing bot seqnum")
 		}
@@ -160,7 +161,7 @@ func createMinionAccounts(botAccount internal.Account, botKeypair *keypair.Full,
 			return minions, errors.Wrap(err, "unable to serialize tx")
 		}
 
-		err = networkClient.SubmitTransaction(txe)
+		err = networkClient.SubmitTransaction(context.Background(), txe)
 		if err != nil {
 			switch e := err.(type) {
 			case internal.NetworkError:

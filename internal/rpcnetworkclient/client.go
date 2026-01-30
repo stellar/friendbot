@@ -129,9 +129,8 @@ func (r *NetworkClient) URL() string {
 
 // SubmitTransaction submits a transaction using the underlying RPC client.
 // It blocks until the transaction is finalized (SUCCESS or FAILED) or times out after 30 seconds.
-func (r *NetworkClient) SubmitTransaction(txXDR string) error {
-	// TODO: Pass context down from the request upstream. See https://github.com/stellar/friendbot/issues/22
-	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
+func (r *NetworkClient) SubmitTransaction(ctx context.Context, txXDR string) error {
+	ctx, cancel := context.WithTimeout(ctx, submitTransactionTimeout)
 	defer cancel()
 
 	request := protocol.SendTransactionRequest{
@@ -210,8 +209,8 @@ func (r *NetworkClient) pollTransactionStatus(ctx context.Context, txHash string
 
 // SimulateTransaction simulates a transaction using the underlying RPC client.
 // This is required for Soroban transactions to get resource fees.
-func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTransactionResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), submitTransactionTimeout)
+func (r *NetworkClient) SimulateTransaction(ctx context.Context, txXDR string) (*internal.SimulateTransactionResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, submitTransactionTimeout)
 	defer cancel()
 
 	request := protocol.SimulateTransactionRequest{
@@ -245,18 +244,18 @@ func (r *NetworkClient) SimulateTransaction(txXDR string) (*internal.SimulateTra
 // For regular accounts (G addresses), it queries the ledger directly.
 // For contract addresses (C addresses), it queries the native SAC balance via simulation.
 // Contracts are treated as always existing, with sequence 0.
-func (r *NetworkClient) GetAccountDetails(address string) (*internal.AccountDetails, error) {
+func (r *NetworkClient) GetAccountDetails(ctx context.Context, address string) (*internal.AccountDetails, error) {
 	// Check if this is a contract address (C address)
 	if strkey.IsValidContractAddress(address) {
-		return r.getContractDetails(address)
+		return r.getContractDetails(ctx, address)
 	}
 
 	// Regular account (G address)
-	return r.getAccountDetails(address)
+	return r.getAccountDetails(ctx, address)
 }
 
 // getAccountDetails retrieves details for a regular Stellar account (G address).
-func (r *NetworkClient) getAccountDetails(accountID string) (*internal.AccountDetails, error) {
+func (r *NetworkClient) getAccountDetails(ctx context.Context, accountID string) (*internal.AccountDetails, error) {
 	accountIDObj, err := xdr.AddressToAccountId(accountID)
 	if err != nil {
 		return nil, &NetworkError{err: err}
@@ -272,7 +271,7 @@ func (r *NetworkClient) getAccountDetails(accountID string) (*internal.AccountDe
 		return nil, &NetworkError{err: err}
 	}
 
-	resp, err := r.client.GetLedgerEntries(context.Background(), protocol.GetLedgerEntriesRequest{
+	resp, err := r.client.GetLedgerEntries(ctx, protocol.GetLedgerEntriesRequest{
 		Keys: []string{ledgerKeyXDR},
 	})
 	if err != nil {
@@ -305,7 +304,7 @@ func (r *NetworkClient) getAccountDetails(accountID string) (*internal.AccountDe
 
 // getContractDetails retrieves the native token balance for a contract address.
 // Contracts are treated as always existing (no not-found error), with sequence 0.
-func (r *NetworkClient) getContractDetails(contractAddress string) (*internal.AccountDetails, error) {
+func (r *NetworkClient) getContractDetails(ctx context.Context, contractAddress string) (*internal.AccountDetails, error) {
 	// Decode the contract address to get the contract ID
 	contractIDBytes, err := strkey.Decode(strkey.VersionByteContract, contractAddress)
 	if err != nil {
@@ -370,7 +369,7 @@ func (r *NetworkClient) getContractDetails(contractAddress string) (*internal.Ac
 	}
 
 	// Simulate the transaction
-	simResult, err := r.SimulateTransaction(txXDR)
+	simResult, err := r.SimulateTransaction(ctx, txXDR)
 	if err != nil {
 		return nil, err
 	}

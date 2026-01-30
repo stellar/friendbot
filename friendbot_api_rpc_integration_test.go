@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"io"
@@ -96,7 +97,7 @@ func setupRPCIntegration(t *testing.T) rpcIntegrationTest {
 func getBalance(t *testing.T, rpcClient internal.NetworkClient, address string) int64 {
 	t.Helper()
 
-	details, err := rpcClient.GetAccountDetails(address)
+	details, err := rpcClient.GetAccountDetails(context.Background(), address)
 	require.NoError(t, err)
 
 	balanceStroops, err := amount.ParseInt64(details.Balance)
@@ -132,7 +133,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_GET(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Check that the recipient account has the expected balance
-	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	// Balance is returned as XLM string format
@@ -172,7 +173,7 @@ func TestFriendbotRPCIntegration_SuccessfulFunding_POST(t *testing.T) {
 	assert.NotEmpty(t, result.EnvelopeXdr)
 
 	// Check that the recipient account has the expected balance
-	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	// Balance is returned as XLM string format
@@ -247,7 +248,7 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 	tt.Router.ServeHTTP(w, req)
 
 	// Check that the recipient account has the expected balance after first funding
-	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	balance := accountDetails.Balance
@@ -262,7 +263,7 @@ func TestFriendbotRPCIntegration_AccountAlreadyFunded(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
 
 	// Check that the balance hasn't changed after the failed funding attempt
-	accountDetails2, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails2, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	balance2 := accountDetails2.Balance
@@ -295,7 +296,7 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	// Check that the recipient account has the expected balance after first funding
-	accountDetails, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	balance := accountDetails.Balance
@@ -324,11 +325,11 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 	bumpSeqTxXDR, err := bumpSeqTx.Base64()
 	require.NoError(t, err)
 
-	err = tt.RPCClient.SubmitTransaction(bumpSeqTxXDR)
+	err = tt.RPCClient.SubmitTransaction(context.Background(), bumpSeqTxXDR)
 	require.NoError(t, err)
 
 	// Check balance after bump seq tx - should be slightly lower due to fees
-	accountDetails2, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails2, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	balance2 := accountDetails2.Balance
@@ -354,7 +355,7 @@ func TestFriendbotRPCIntegration_AccountRefundedAfterSpending(t *testing.T) {
 
 	// Check that the recipient account received another starting balance payment
 	// (friendbot sends the full starting balance, not just the difference)
-	accountDetails3, err := tt.RPCClient.GetAccountDetails(recipientAddress)
+	accountDetails3, err := tt.RPCClient.GetAccountDetails(context.Background(), recipientAddress)
 	require.NoError(t, err)
 
 	balance3 := accountDetails3.Balance
