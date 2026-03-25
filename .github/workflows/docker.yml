@@ -97,7 +97,6 @@ jobs:
         login-public-ecr: 'true'
     - name: Push image to Amazon ECR public repository
       env:
-        ECR_REGISTRY: ${{ steps.ecr-login.outputs.ecr-registry }}
         ECR_PUBLIC_REGISTRY: ${{ steps.ecr-login.outputs.ecr-public-registry }}
         REGISTRY_ALIAS: stellar
         REPOSITORY: friendbot
