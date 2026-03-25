@@ -91,7 +91,7 @@ jobs:
         docker load -i /tmp/image
     - name: ECR Login via OIDC
       id: ecr-login
-      uses: stellar/ops/.github/actions/ecr-login@main
+      uses: stellar/ops/.github/actions/ecr-login@v1
       with:
         aws-region: 'us-east-1'
         login-public-ecr: 'true'
