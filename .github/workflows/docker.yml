@@ -74,3 +74,35 @@ jobs:
             context: 'docker.io/${{ needs.setup.outputs.tag }}',
             description: 'Available',
           });
+
+  push-ecr-public:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [setup, build]
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v5
+      with:
+        pattern: image-amd64
+        path: /tmp/
+    - run: |
+        docker load -i /tmp/image
+    - name: ECR Login via OIDC
+      id: ecr-login
+      uses: stellar/actions/sdf-ecr-login@main
+      with:
+        aws-oidc-role: ${{ secrets.AWS_GITHUB_OIDC_ROLE }}       # required
+        aws-ecr-login-role: ${{ secrets.AWS_ECR_LOGIN_ROLE }}     # required
+        aws-region: 'us-east-1'
+        login-public-ecr: 'true'
+    - name: Push image to Amazon ECR public repository
+      env:
+        ECR_PUBLIC_REGISTRY: ${{ steps.ecr-login.outputs.ecr-public-registry }}
+        REGISTRY_ALIAS: stellar
+        REPOSITORY: friendbot
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker tag "${{ needs.setup.outputs.tag }}" "$ECR_PUBLIC_REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG"
+        docker push "$ECR_PUBLIC_REGISTRY/$REGISTRY_ALIAS/$REPOSITORY:$IMAGE_TAG"
