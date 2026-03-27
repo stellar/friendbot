@@ -91,8 +91,10 @@ jobs:
         docker load -i /tmp/image
     - name: ECR Login via OIDC
       id: ecr-login
-      uses: stellar/ops/.github/actions/ecr-login@v1
+      uses: stellar/actions/sdf-ecr-login@main
       with:
+        aws-oidc-role: ${{ secrets.AWS_GITHUB_OIDC_ROLE }}       # required
+        aws-ecr-login-role: ${{ secrets.AWS_ECR_LOGIN_ROLE }}     # required
         aws-region: 'us-east-1'
         login-public-ecr: 'true'
     - name: Push image to Amazon ECR public repository
